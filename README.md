@@ -2,7 +2,7 @@
 Chicpea
 =======
 
-Chicpea is a Django app to run visualise HiC interactions.
+Chicpea is a Django app to visualise HiC interactions.
 
 Quick start
 -----------
