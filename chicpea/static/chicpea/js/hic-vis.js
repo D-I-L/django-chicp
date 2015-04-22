@@ -159,6 +159,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
     //d3.json("/CHIC_DEMO2/cgi-bin/prototype.pl?gene=" + gene + '&tissue=' + tissue, function (error, json) {
     d3.json("/chicpea/search?gene=" + gene + '&tissue=' + tissue, function (error, json) {
         if (error) return console.warn(error);
+        if (json.error) return console.warn(json.error);
         data = json;
         //console.log(data);
         var genes = data.genes;
@@ -366,9 +367,9 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             // tried to use 'use' that doesn't work !
             // this approach is simple but does not help with 
             vis.select('#p' + i)
-                .style("stroke", "yellow")
+                .attr("stroke", "yellow")
                 //.style("stroke-width", "10")
-            .attr("stroke-width", 6);
+                .attr("stroke-width", 6);
 
             // try sort approach from stackexchange http://stackoverflow.com/questions/13595175/updating-svg-element-z-index-with-d3
 
@@ -404,7 +405,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
                 .duration(500)
                 .style("opacity", 0);
             vis.select('#p' + i)
-            	.style("stroke", function (d) {
+            	.attr("stroke", function (d) {
 					tissue = $("input:radio[name=tissue]:checked").val();
 					return color(d[tissue]);
 				})
