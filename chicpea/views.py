@@ -42,7 +42,7 @@ def chicpeaSearch(request, url):
 
     if queryDict.get("region"):
         region = queryDict.get("region")
-        mo = re.match(r"(\d+):(\d+)-(\d+)", region)
+        mo = re.match(r"(.*):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
         if utils.sampleLookup.get(tissue):
             dataDir = os.path.join(settings.STATIC_ROOT, "chicpea/data/")
@@ -62,7 +62,7 @@ def chicpeaSearch(request, url):
     else:
         geneName = queryDict.get("gene")
 
-        hicQuery = utils.prepareTargetQueryJson2(geneName, utils.tissues, utils.hicFields)
+        hicQuery = utils.prepareTargetQueryJson(geneName, utils.tissues, utils.hicFields)
         # hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='gene_targets')
         hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='chicpea_gene_target')
         hicResult = hicElastic.get_result()
@@ -74,6 +74,12 @@ def chicpeaSearch(request, url):
             segmin = segmin - extension
             segmax = segmax + extension
             hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
+
+    try:
+        chrom
+    except NameError:
+        retJSON = {'error': 'No chromosome defined for search'}
+        return JsonResponse(retJSON)
 
     # get genes based on this segment
     geneQuery = Elastic.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
