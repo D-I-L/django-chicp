@@ -17,7 +17,7 @@ sampleLookup = {'Naive_CD4': ['C002Q1H1', 'C002TWH1', 'S007G7H4', 'S007DDH2'],
                 'Macrophages_M2': ['S00622H1', 'S006VIH1', 'S00BS4H1', 'S00FTNH1']}
 
 
-def prepareTargetQueryJson2(geneName, tissues, flist, maxDist=4e6):
+def prepareTargetQueryJson(geneName, tissues, flist, maxDist=4e6):
     ''' this prepares a JSON string that can be use to query elastic search for interactions'''
     tissueFilter = list()
     for t in tissues:
@@ -33,25 +33,6 @@ def prepareTargetQueryJson2(geneName, tissues, flist, maxDist=4e6):
                                      ],
                                     "should": tissueFilter
                                     }}}
-                       }
-             }
-    return(qdata)
-
-
-def prepareGFFQueryJson(chrom, start, end, flist):
-    ''' this prepares a JSON string that can be use to query elastic search GFF index based on a genomic range
-    for time being return all fields'''
-    qdata = {"_source": flist,
-             "query": {"filtered":
-                       {"query": {"term": {"seqid": chrom}},
-                        "filter": {"or": [{"range": {"end": {"gte": start, "lte": end}}},
-                                          {"range": {"start": {"gte": start, "lte": end}}},
-                                          {"bool": {"must": [
-                                                    {"range": {"start": {"lte": start}}},
-                                                    {"range": {"end": {"gte": end}}}
-                                                    ]}
-                                           }
-                                          ]}}
                        }
              }
     return(qdata)
