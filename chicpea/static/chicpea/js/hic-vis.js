@@ -137,7 +137,6 @@ function computeArcPath(start, end, r1, r2, totalBP) {
 }
 
 function computePointPath(start, end, score, minscore, maxscore, r, totalBP, diameter) {
-    //var maxscore = 20;
     var adjMaxscore = maxscore - minscore;
     var adjScore = score - minscore;
     var trackwidth = diameter * 0.05;
@@ -312,10 +311,10 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 
 
         var color = d3.scale.linear()
-            .domain([12, 20])
+            .domain([5, 20])
             .range(["blue", "red"]);
         
-        var score = 12;
+        var score = 5;
 
         vis.append("g").attr("class", "middle hic").selectAll("svg")
         //.data(hics.filter(function(d){ return parseFloat(d[tissue]) >= score; }))
@@ -344,11 +343,12 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             .attr("transform", trans)
             .attr("fill", "none")
             .attr("stroke", function (d) {
-            return 'green';
+            //return 'green';
             //return color(d.B23_CD4_Naive_D3_4)
-            //return color(d.tissue[tissue]);
+            tissue = $("input:radio[name=tissue]:checked").val();
+            return color(d[tissue]);
         })
-            .attr("stroke-width", 4)
+            .attr("stroke-width", 3)
             .on("mouseover", function (d, i) {
             div.transition()
                 .duration(200)
@@ -367,7 +367,8 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             // this approach is simple but does not help with 
             vis.select('#p' + i)
                 .style("stroke", "yellow")
-                .style("stroke-width", "10");
+                //.style("stroke-width", "10")
+            .attr("stroke-width", 6);
 
             // try sort approach from stackexchange http://stackoverflow.com/questions/13595175/updating-svg-element-z-index-with-d3
 
@@ -403,8 +404,13 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
                 .duration(500)
                 .style("opacity", 0);
             vis.select('#p' + i)
-                .style("stroke", "green")
-                .style("stroke-width", "4");
+            	.style("stroke", function (d) {
+					tissue = $("input:radio[name=tissue]:checked").val();
+					return color(d[tissue]);
+				})
+            .attr("stroke-width", 3);
+                //.style("stroke", "green")
+                //.style("stroke-width", "4");
             vis.selectAll(".deleteMe").remove();
 
         })
@@ -558,12 +564,12 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("stroke", function (d) {
 					if (parseFloat(d.score) == maxscore) return "red";
 					if (parseFloat(d.score) >= 7.03) return "green";
-					return "grey";
+					return "lightgrey";
 				})
 				.attr("fill", function (d) {
 					if (parseFloat(d.score) == maxscore) return "red";
 					if (parseFloat(d.score) >= 7.03) return "green";
-					return "grey";
+					return "lightgrey";
 				})
 				.attr("transform", function (d) {
 					return "translate(" + xRange(d.start + regionStart) + "," + yRangeS(d.score) + ")";
@@ -685,7 +691,6 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				if (data.blueprint[sample].length == 0)
 					continue;
 				
-				console.log(trackOffset);
 				trackOffset += margin.top;
 				
 				var blueprint = blueprintTrack.append("g").attr("class", sample).selectAll(".blueprint")
@@ -736,7 +741,6 @@ function resetPage(gene, tissue, breadcrumb) {
 $(document).ready(function () {
     $("#pushme").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
-    		//var diameter = $("input:radio[name=di]:checked").val();
     		var diameter = 750;
     		var gene = $("#gene").val().toUpperCase();
     		renderHic(gene, tissue, diameter, 1)
@@ -745,10 +749,8 @@ $(document).ready(function () {
 
     $("input:radio[name=tissue]").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
-    		//var diameter = $("input:radio[name=di]:checked").val();
-    		//var diameter = 750;
     		var gene = $("#gene").val().toUpperCase();
-    		//renderHic(gene, tissue, diameter, 0)
+    		$("#page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
     		
     		d3.select("#svg-container").selectAll(".deleteClick").remove();
     		d3.select("#svg-container").selectAll(".updateClick").classed('updateClick', false);
@@ -765,16 +767,8 @@ $(document).ready(function () {
     			d3.select("#svg-container").selectAll("path.interaction."+tissue).attr("display", "inline");
     		}
     });
-
-    /*$("input:radio[name=di]").bind("click", function () {
-        var tissue = $("input:radio[name=tissue]:checked").val();
-        //var diameter = $("input:radio[name=di]:checked").val();
-        var diameter = 750;
-        var gene = $("#gene").val().toUpperCase();
-        renderHic(gene, tissue, diameter, 0)
-    });*/
 });
 
 var geneParam = getQueryVariable("gene");
 if (geneParam == undefined){ geneParam = 'IL2RA'; }
-renderHic(geneParam, 'CD4_Activated', 750, 1)
+renderHic(geneParam, 'Total_CD4_Activated', 750, 1)

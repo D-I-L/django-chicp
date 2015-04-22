@@ -43,7 +43,7 @@
 						class="icon-bar"></span> <span class="icon-bar"></span> <span
 						class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/chicpea/">HiC Visualisation</a>
+				<a class="navbar-brand" href="/chicpea/">CHICPea</a>
 			</div>
 		</div>
 	</nav>
@@ -69,6 +69,16 @@
 										>&nbsp;{{ t.text }}</label>
 									</div>
 						{% endfor %}
+								</div>
+							</div>
+						</div>
+						<div class="panel panel-default" style="margin-top: 20px">
+							<div class="panel-heading">GWAS Data</div>
+							<div class="panel-body">
+								<div class="form-group">
+									<div class="radio gwas" style="display: block">
+										<label><input type="radio" name="gwas" value="barrett" checked="checked">&nbsp;T1D - Barrett <em>et al.</em></label>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -148,7 +158,6 @@
 		function styles() {
 			var used = "";
 			var sheets = document.styleSheets;
-			console.log(window.location.hostname);
 			for (var i = 0; i < sheets.length; i++) {
 				if (sheets[i].href.match(window.location.hostname)){
 					var rules = sheets[i].cssRules;
@@ -189,7 +198,6 @@
 			$("#tissue").val($("input:radio[name=tissue]:checked").val());
 			$("#css-styles").val(styles());
 			$("#svgform").submit();
-			//console.log($("#svgform"))
 		}
 		$(document).ready(function() {
 			$("#save_as_svg").click(function() {

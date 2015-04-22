@@ -1,4 +1,3 @@
-import io
 import os
 import re
 from svgutils.templates import VerticalLayout, ColumnLayout
@@ -7,6 +6,7 @@ from tempfile import NamedTemporaryFile
 
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
+from django.conf import settings
 
 from chicpea import utils
 from search.elastic_model import Elastic
@@ -17,14 +17,14 @@ def chicpea(request):
     queryDict = request.GET
     context = dict()
     context['geneName'] = 'IL2RA'
-    context['tissue'] = 'CD4_Activated'
+    context['tissue'] = 'Total_CD4_Activated'
     if queryDict.get("gene"):
         context['geneName'] = queryDict.get("gene")
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
 
-    elasticJSON = Elastic(db="gene_targets").get_mapping(mapping_type="gene_target")
-    tissueList = list(elasticJSON['gene_targets']['mappings']['gene_target']['_meta']['tissue_type'].keys())
+    elasticJSON = Elastic(db="chicpea_gene_target").get_mapping(mapping_type="gene_target")
+    tissueList = list(elasticJSON['chicpea_gene_target']['mappings']['gene_target']['_meta']['tissue_type'].keys())
     utils.tissues = tissueList
     tissues = list()
     tissueList.sort()
@@ -37,43 +37,43 @@ def chicpea(request):
 def chicpeaSearch(request, url):
     queryDict = request.GET
     tissue = queryDict.get("tissue")
-    # blueprint = []
     blueprint = {}
+    hic = []
 
     if queryDict.get("region"):
         region = queryDict.get("region")
         mo = re.match(r"(\d+):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
-        hic = []
         if utils.sampleLookup.get(tissue):
+            dataDir = os.path.join(settings.STATIC_ROOT, "chicpea/data/")
             for s in utils.sampleLookup.get(tissue):
-                print(s)
                 bp = []
-                inFile = "/tmp/"+s+".bb"
+                inFile = dataDir+s+".bb"
                 if (os.path.exists(inFile)):
                     outFile = NamedTemporaryFile(delete=False)
                     os.system("bigBedToBed "+inFile+" "+str(outFile.name)+" -chrom=chr"+chrom+" -start="+segmin+" -end="+segmax)
                     with open(str(outFile.name)) as f:
                         for line in f:
                             parts = re.split(r'\t+', line.rstrip('\n'))
-                            bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3], 'color': parts[8], 'sample': s})
+                            bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3],
+                                       'color': parts[8], 'sample': s})
                     bp = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], bp)
                 blueprint[s] = bp
     else:
-        # tissue = queryDict.get("tissue")
         geneName = queryDict.get("gene")
 
         hicQuery = utils.prepareTargetQueryJson2(geneName, utils.tissues, utils.hicFields)
-        hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='gene_targets')
+        # hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='gene_targets')
+        hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='chicpea_gene_target')
         hicResult = hicElastic.get_result()
-        hic = hicResult['data']
-
-        chrom = hicResult['data'][0]['baitChr']
-        (segmin, segmax) = utils.segCoords(hic)
-        extension = int(0.05*(segmax-segmin))
-        segmin = segmin - extension
-        segmax = segmax + extension
-        hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
+        if len(hicResult['data']) > 0:
+            hic = hicResult['data']
+            chrom = hicResult['data'][0]['baitChr']
+            (segmin, segmax) = utils.segCoords(hic)
+            extension = int(0.05*(segmax-segmin))
+            segmin = segmin - extension
+            segmax = segmax + extension
+            hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
 
     # get genes based on this segment
     geneQuery = Elastic.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
