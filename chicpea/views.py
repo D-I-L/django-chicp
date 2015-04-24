@@ -4,12 +4,14 @@ from svgutils.templates import VerticalLayout, ColumnLayout
 from svgutils.transform import fromstring
 from tempfile import NamedTemporaryFile
 
+from django.conf import settings
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
-from django.conf import settings
 
 from chicpea import utils
-from search.elastic_model import Elastic
+from elastic.elastic_model import Search, BoolQuery, Query, RangeQuery, \
+    ElasticQuery
+from elastic.elastic_settings import ElasticSettings
 
 
 # Create your views here.
@@ -23,7 +25,7 @@ def chicpea(request):
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
 
-    elasticJSON = Elastic(db="chicpea_gene_target").get_mapping(mapping_type="gene_target")
+    elasticJSON = Search(idx="chicpea_gene_target").get_mapping(mapping_type="gene_target")
     tissueList = list(elasticJSON['chicpea_gene_target']['mappings']['gene_target']['_meta']['tissue_type'].keys())
     utils.tissues = tissueList
     tissues = list()
@@ -62,10 +64,19 @@ def chicpeaSearch(request, url):
     else:
         geneName = queryDict.get("gene")
 
-        hicQuery = utils.prepareTargetQueryJson(geneName, utils.tissues, utils.hicFields)
-        # hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='gene_targets')
-        hicElastic = Elastic(query=hicQuery, search_from=0, size=2000000, db='chicpea_gene_target')
+        query_bool = BoolQuery()
+        query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
+
+        tissueFilter = list()
+        for t in utils.tissues:
+            tissueFilter.append(RangeQuery(t, gte=5))
+
+        query_bool.should(tissueFilter)
+        query = ElasticQuery.filtered_bool(Query.query_string(geneName, fields=["name", "ensg"]),
+                                           query_bool, sources=utils.hicFields + utils.tissues)
+        hicElastic = Search(query, idx='chicpea_gene_target')
         hicResult = hicElastic.get_result()
+        print(hicResult)
         if len(hicResult['data']) > 0:
             hic = hicResult['data']
             chrom = hicResult['data'][0]['baitChr']
@@ -82,8 +93,8 @@ def chicpeaSearch(request, url):
         return JsonResponse(retJSON)
 
     # get genes based on this segment
-    geneQuery = Elastic.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                            size=2000, db='grch37_75_genes', field_list=utils.geneFields)
+    geneQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
+                                            size=2000, idx='grch37_75_genes', field_list=utils.geneFields)
     geneResult = geneQuery.get_result()
     genes = geneResult['data']
     genes = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], genes)
@@ -92,8 +103,8 @@ def chicpeaSearch(request, url):
         o.update({"bumpLevel": 0})
 
     # get SNPs based on this segment
-    snpQuery = Elastic.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                           size=2000000, db='gb2_hg19_gwas_t1d_barrett_4_17_0/gff',
+    snpQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
+                                           size=2000000, idx='gb2_hg19_gwas_t1d_barrett_4_17_0/gff',
                                            field_list=utils.snpFields)
     snpResult = snpQuery.get_result()
     snps = snpResult['data']
