@@ -18,8 +18,6 @@ setup(
     description='A Django app to visualise HiC interactions.',
     long_description=open(os.path.join(ROOT, 'README.md')).read(),
     install_requires=["Django>=1.8"],
-    dependency_links=['http://github.com/D-I-L/django-elastic.git#egg=elastic',
-                      'http://github.com/btel/svg_utils.git#egg=svgutils'],
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
