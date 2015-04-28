@@ -17,7 +17,7 @@ setup(
     url='http://github.com/D-I-L/django-chicpea',
     description='A Django app to visualise HiC interactions.',
     long_description=open(os.path.join(ROOT, 'README.md')).read(),
-    install_requires=["Django>=1.8", "-e git+http://github.com/D-I-L/django-search.git#egg=search"],
+    install_requires=["Django>=1.8", "-e git+http://github.com/D-I-L/django-elastic.git#egg=elastic"],
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
