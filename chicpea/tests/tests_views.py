@@ -1,5 +1,4 @@
 from django.core.urlresolvers import resolve, reverse
-from django.http.request import HttpRequest
 from django.test import TestCase
 from django.test.client import RequestFactory
 
@@ -63,11 +62,20 @@ class ChicpeaTestCase(TestCase):
 
     def test_chicpeasearch_gene(self):
         ''' Test chicpea search for a gene & tissue '''
-        geneName = 'ENS699'
+        geneName = 'IL2RA'
         tissue = 'Monocytes'
         request = self.factory.get("/chicpea/search?gene="+geneName+"&tissue="+tissue)
         response = chicpeaSearch(request, "/chicpea/search?gene="+geneName+"&tissue="+tissue)
-        print(response.content)
+        self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_region(self):
         ''' Test chicpea search for a region '''
+
+    def _HICtest(self, json):
+        ''' Testing JSON respon from a chicpea search '''
+        self.assertIn("hic", json)
+        self.assertIn("snps", json)
+        self.assertIn("genes", json)
+        self.assertIn("blueprint", json)
+        self.assertIn("meta", json)
+        self.assertIn("region", json)
