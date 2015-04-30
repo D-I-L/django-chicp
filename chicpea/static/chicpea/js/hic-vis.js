@@ -159,7 +159,16 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
     //d3.json("/CHIC_DEMO2/cgi-bin/prototype.pl?gene=" + gene + '&tissue=' + tissue, function (error, json) {
     d3.json("/chicpea/search?gene=" + gene + '&tissue=' + tissue, function (error, json) {
         if (error) return console.warn(error);
-        if (json.error) return console.warn(json.error);
+        if (json.error) {
+        	div = d3.select("#svg-container")
+	            .append("div")
+	            .html("<h1>"+json.error+"</h1>")
+	            .attr("id", "message")
+	            .style("width", "100%")
+	            .style("text-align", "center")
+	            .style("padding-top", "200px");
+        	return;
+        }
         data = json;
         //console.log(data);
         var genes = data.genes;
