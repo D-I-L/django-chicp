@@ -76,7 +76,6 @@ def chicpeaSearch(request, url):
                                            query_bool, sources=utils.hicFields + utils.tissues)
         hicElastic = Search(query, idx='chicpea_gene_target')
         hicResult = hicElastic.get_result()
-        print(hicResult)
         if len(hicResult['data']) > 0:
             hic = hicResult['data']
             chrom = hicResult['data'][0]['baitChr']
@@ -85,6 +84,9 @@ def chicpeaSearch(request, url):
             segmin = segmin - extension
             segmax = segmax + extension
             hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
+        else:
+            retJSON = {'error': 'Gene name '+geneName+' not found in this dataset.'}
+            return JsonResponse(retJSON)
 
     try:
         chrom
@@ -94,7 +96,7 @@ def chicpeaSearch(request, url):
 
     # get genes based on this segment
     geneQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                            size=2000, idx='grch37_75_genes', field_list=utils.geneFields)
+                                           size=2000, idx='grch37_75_genes', field_list=utils.geneFields)
     geneResult = geneQuery.get_result()
     genes = geneResult['data']
     genes = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], genes)
@@ -104,8 +106,8 @@ def chicpeaSearch(request, url):
 
     # get SNPs based on this segment
     snpQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                           size=2000000, idx='gb2_hg19_gwas_t1d_barrett_4_17_0/gff',
-                                           field_list=utils.snpFields)
+                                          size=2000000, idx='gb2_hg19_gwas_t1d_barrett_4_17_0/gff',
+                                          field_list=utils.snpFields)
     snpResult = snpQuery.get_result()
     snps = snpResult['data']
     snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
