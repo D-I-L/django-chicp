@@ -360,36 +360,28 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
         })
             .attr("stroke-width", 3)
             .on("mouseover", function (d, i) {
-            div.transition()
-                .duration(200)
-                .style("opacity", 0.9);
-            //div.html("HicCup score " + parseFloat(d.tissue[tissue]).toFixed(2) + "</br>Bait: " + d.baitStart + " " + d.baitEnd + "</br>Target: " + d.oeStart + " " + d.oeEnd)
-            var bStart = numberWithCommas(d.baitStart + parseInt(meta.ostart));
-            var bEnd = numberWithCommas(d.baitEnd + parseInt(meta.ostart));
-            var tStart = numberWithCommas(d.oeStart + parseInt(meta.ostart));
-            var tEnd = numberWithCommas(d.oeEnd + parseInt(meta.ostart));
-            div.html("Bait: " + bStart + '-' + bEnd + "</br>Target: " + tStart + '-' + tEnd)
-                .style("left", (d3.event.pageX) + "px")
-                .style("top", (d3.event.pageY - 28) + "px");
-
-            // have a zscore issue
-            // tried to use 'use' that doesn't work !
-            // this approach is simple but does not help with 
-            vis.select('#p' + i)
-                .attr("stroke", "yellow")
-                //.style("stroke-width", "10")
-                .attr("stroke-width", 6);
-
-            // try sort approach from stackexchange http://stackoverflow.com/questions/13595175/updating-svg-element-z-index-with-d3
-
-            vis.selectAll("path.interaction").sort(function (a, b) { // select the parent and sort the path's
-            		//console.log(a)
-            		//console.log(b)
-                if (a.id != d.id) return -1; // a is not the hovered element, send "a" to the back
-                else return 1; // a is the hovered element, bring "a" to the front
-            });
+            		tissue = $("input:radio[name=tissue]:checked").val();
+					div.transition()
+						.duration(200)
+						.style("opacity", 0.9);
+					
+					div.html("HicCup score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
+					
+					vis.selectAll("path.interaction").sort(function (a, b) {
+							if (a[tissue] > b[tissue]) return 1;
+							if (b[tissue] > a[tissue]) return -1;
+							else return 0;
+					});
+					
+					
+					if (d3.select(".updateClick").node() != null){
+						this.parentNode.appendChild(d3.select(".updateClick").node());
+						console.log("sorted to top?");
+					}
+					d3.select(this).classed('hover', true);
+					this.parentNode.appendChild(this);
             
-            vis.select("#path").selectAll(".deleteClick");
+            //vis.select("#path").selectAll(".deleteClick");
 
             vis.append("path")
                 .attr("class", "deleteMe")
@@ -409,19 +401,17 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 
 
         })
-            .on("mouseout", function (d, i) {
-            div.transition()
-                .duration(500)
-                .style("opacity", 0);
-            vis.select('#p' + i)
-            	.attr("stroke", function (d) {
-					tissue = $("input:radio[name=tissue]:checked").val();
-					return color(d[tissue]);
-				})
-            .attr("stroke-width", 3);
-                //.style("stroke", "green")
-                //.style("stroke-width", "4");
-            vis.selectAll(".deleteMe").remove();
+        	.on("mouseout", function (d, i) {
+				div.transition()
+					.duration(500)
+					.style("opacity", 0);
+				d3.select(this).classed('hover', false);
+				vis.selectAll(".deleteMe").remove();
+					
+				if (d3.select(".updateClick").node() != null){
+					this.parentNode.appendChild(d3.select(".updateClick").node());
+					console.log("sorted to top?");
+				}
 
         })
             .on("click", function (d, i) {
@@ -429,7 +419,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             		vis.selectAll(".updateClick").classed('updateClick', false);
             		
             		$(".deleteMe").attr('class', 'deleteClick');
-            		vis.select('#p' + i).classed('updateClick', true).style("stroke", "yellow").style("stroke-width", "10");
+            		vis.select('#p' + i).classed('updateClick', true);	
             		
 					d3.select("#bait-svg").remove();
 					d3.select("#target-svg").remove();
