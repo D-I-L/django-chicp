@@ -129,10 +129,11 @@ svg .axis .tick text, svg .label { font-size:0.8em; }
 svg .axis line, .axis path { fill: none; stroke: #000; }
 
 svg .genes path { stroke-width: 10; fill: none;}
+svg .hover { stroke-width: 6px; stroke: yellow }
 svg .blueprint path { stroke-width: 6; fill: none;}
 svg .genes path.line { stroke-width: 0; fill: none;}
 
-svg .updateClick { stroke: yellow !important; stroke-width: 10px !important; }
+svg .updateClick { stroke: yellow !important; stroke-width: 6px !important; }
 
 svg .genes path.hilight { stroke: yellow; }
 svg .genes path.misc_RNA { stroke: #ff7f0e; }
