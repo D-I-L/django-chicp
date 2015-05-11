@@ -10,17 +10,19 @@ from django.shortcuts import render
 
 from chicpea import utils
 from elastic.elastic_model import Search, BoolQuery, Query, RangeQuery, \
-    ElasticQuery
+    ElasticQuery, OrFilter
+from elastic.elastic_settings import ElasticSettings
 
 
 # Create your views here.
 def chicpea(request):
     queryDict = request.GET
     context = dict()
-    context['geneName'] = 'IL2RA'
+    context['searchTerm'] = 'IL2RA'
     context['tissue'] = 'Total_CD4_Activated'
-    if queryDict.get("gene"):
-        context['geneName'] = queryDict.get("gene")
+    if queryDict.get("term"):
+        context['searchTerm'] = queryDict.get("term")
+        print("term = "+queryDict.get("term"))
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
 
@@ -60,32 +62,52 @@ def chicpeaSearch(request, url):
                                        'color': parts[8], 'sample': s})
                     bp = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], bp)
                 blueprint[s] = bp
-    else:
-        geneName = queryDict.get("gene")
+    elif queryDict.get("searchTerm"):
+        if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
+            snp = queryDict.get("searchTerm").lower()
+            print("search term = "+snp)
 
-        query_bool = BoolQuery()
-        query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
+            query = ElasticQuery.query_match("id", snp)
+            elastic = Search(query, idx='dbsnp138')
+            snpResult = elastic.get_result()
+            if (len(snpResult['data']) > 0):
+                chrom = snpResult['data'][0]['seqid']
+                position = snpResult['data'][0]['start']
 
-        tissueFilter = list()
-        for t in utils.tissues:
-            tissueFilter.append(RangeQuery(t, gte=5))
+                query_bool = BoolQuery()
+                query_bool.must([Query.term("baitChr", chrom),
+                                 Query.term("oeChr", chrom),
+                                 RangeQuery("dist", gte=-2e6, lte=2e6)])
+                query_bool = _add_tissue_filter(query_bool)
 
-        query_bool.should(tissueFilter)
-        query = ElasticQuery.filtered_bool(Query.query_string(geneName, fields=["name", "ensg"]),
-                                           query_bool, sources=utils.hicFields + utils.tissues)
-        hicElastic = Search(query, idx='chicpea_gene_target')
-        hicResult = hicElastic.get_result()
-        if len(hicResult['data']) > 0:
-            hic = hicResult['data']
-            chrom = hicResult['data'][0]['baitChr']
-            (segmin, segmax) = utils.segCoords(hic)
-            extension = int(0.05*(segmax-segmin))
-            segmin = segmin - extension
-            segmax = segmax + extension
-            hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
+                filter_bool = BoolQuery()
+                filter_bool.should([BoolQuery(must_arr=[RangeQuery("baitStart", lte=position),
+                                                        RangeQuery("baitEnd", gte=position)]),
+                                    BoolQuery(must_arr=[RangeQuery("oeStart", lte=position),
+                                                        RangeQuery("oeEnd", gte=position)])])
+
+                query = ElasticQuery.filtered_bool(query_bool, filter_bool,
+                                                   sources=utils.hicFields + utils.tissues)
+                hic, segmin, segmax = _build_hic_query(query)
+
+                if len(hic) == 0:
+                    retJSON = {'error': 'Marker '+snp+' not found in this dataset.'}
+                    return JsonResponse(retJSON)
         else:
-            retJSON = {'error': 'Gene name '+geneName+' not found in this dataset.'}
-            return JsonResponse(retJSON)
+            geneName = queryDict.get("searchTerm").upper()
+
+            query_bool = BoolQuery()
+            query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
+            query_bool = _add_tissue_filter(query_bool)
+            query = ElasticQuery.filtered_bool(Query.query_string(geneName, fields=["name", "ensg"]), query_bool,
+                                               sources=utils.hicFields + utils.tissues)
+
+            hic, segmin, segmax = _build_hic_query(query)
+
+            if len(hic) == 0:
+                retJSON = {'error': 'Gene name '+geneName+' not found in this dataset.'}
+                return JsonResponse(retJSON)
+            chrom = hic[0]['baitChr']
 
     try:
         chrom
@@ -135,7 +157,7 @@ def chicpeaDownload(request, url):
     SVG = queryDict.get("data-main")
     CSS = queryDict.get("css-styles")
     tissue = queryDict.get("tissue").replace(' ', '_')
-    returnFileName = 'CHICPEA-' + queryDict.get("geneName") + '-' + tissue + '.' + output_format
+    returnFileName = 'CHICPEA-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
 
     if queryDict.get("data-bait") and queryDict.get("data-target"):
         s1 = queryDict.get("data-bait")
@@ -153,7 +175,8 @@ def chicpeaDownload(request, url):
         layout._generate_layout()
         SVG = layout.to_str().decode()
 
-    SVG = SVG.replace("</svg>", '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
+    SVG = SVG.replace("</svg>",
+                      '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
     if output_format == "svg":
         response = HttpResponse(content_type='image/svg+xml')
@@ -177,3 +200,35 @@ def chicpeaDownload(request, url):
         retJSON = {"error": "output format was not recognised"}
         response = JsonResponse(retJSON)
     return response
+
+
+def _add_tissue_filter(bool_query):
+
+    tissueFilter = list()
+    for t in utils.tissues:
+        tissueFilter.append(RangeQuery(t, gte=5))
+
+    bool_query.should(tissueFilter)
+    return bool_query
+
+
+def _build_hic_query(query):
+
+    hic = []
+    segmin = 0
+    segmax = 0
+
+#    if query_filter is None:
+#        elasticQuery = ElasticQuery(query, sources=utils.hicFields + utils.tissues)
+#    else:
+#        elasticQuery = ElasticQuery.filtered_bool(query_filter, query, sources=utils.hicFields + utils.tissues)
+    hicElastic = Search(query, idx='chicpea_gene_target')
+    hicResult = hicElastic.get_result()
+    if len(hicResult['data']) > 0:
+        hic = hicResult['data']
+        (segmin, segmax) = utils.segCoords(hic)
+        extension = int(0.05*(segmax-segmin))
+        segmin = segmin - extension
+        segmax = segmax + extension
+        hic = utils.makeRelative(int(segmin), int(segmax), ['baitStart', 'baitEnd', 'oeStart', 'oeEnd'], hic)
+    return hic, segmin, segmax
