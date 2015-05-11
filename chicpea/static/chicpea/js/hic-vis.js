@@ -140,7 +140,9 @@ function computePointPath(start, end, score, minscore, maxscore, r, totalBP, dia
     var adjMaxscore = maxscore - minscore;
     var adjScore = score - minscore;
     var trackwidth = diameter * 0.05;
-    var radius = r + ((parseFloat(adjScore) / adjMaxscore) * trackwidth);
+    var radius = r;
+    if (adjMaxscore > 0)
+    	radius += ((parseFloat(adjScore) / adjMaxscore) * trackwidth)
     var startcoords = computeCartesian(radius, start, totalBP);
     return "translate(" + (startcoords.x + (diameter * 0.5)) + "," + (startcoords.y + (diameter * 0.5)) + ")";
 }
@@ -149,15 +151,19 @@ function numberWithCommas(x) {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+function log10(val) {
+	return Math.log(val) / Math.LN10;
+}
 
 
 
-function renderHic(gene, tissue, diameter, breadcrumb) {
-    resetPage(gene, tissue, breadcrumb)
+
+function renderHic(term, tissue, diameter, breadcrumb) {
+    resetPage(term, tissue, breadcrumb)
     var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
     var maxscore = 0;
-    //d3.json("/CHIC_DEMO2/cgi-bin/prototype.pl?gene=" + gene + '&tissue=' + tissue, function (error, json) {
-    d3.json("/chicpea/search?gene=" + gene + '&tissue=' + tissue, function (error, json) {
+    
+    d3.json("/chicpea/search?searchTerm=" + term + '&tissue=' + tissue, function (error, json) {
         if (error) return console.warn(error);
         if (json.error) {
         	div = d3.select("#svg-container")
@@ -170,19 +176,21 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
         	return;
         }
         data = json;
-        //console.log(data);
         var genes = data.genes;
         var snps = data.snps;
         var meta = data.meta;
-        //console.log(data.region);
-        // compute max score
-        //var maxscore = 0;
+        
+        var tissues = [];
+        for (var i=0;i<meta.tissues.length;i++) {
+        	tissues[meta.tissues[i]] = 0;
+        }        
+        
         for (var i = 0; i < snps.length; i++) {
             if (snps[i].score > maxscore) {
                 maxscore = parseFloat(snps[i].score);
             }
         }
-        //console.log(snps);
+        
         d3.select("#message").remove();
         var hics = data.hic;
         if (hics.length == 0) {
@@ -259,16 +267,17 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 
         //add gene track
 
-        vis.append("g").attr("class", "track genes").selectAll("svg")
+        var gene = vis.append("g").attr("class", "track genes").selectAll("svg")
             .data(genes)
-            .enter()
-            .append("path")
+            .enter();
+            
+        gene.append("path")
             .attr("d", function (d) {
 				return (computeStrandPath(d.start, d.end, (diameter * 0.35) + (d.bumpLevel * 15), totalBP));
 			})
             .attr("transform", trans)
             .attr("class", function (d) {
-            		if (d.gene_name == $("#gene").val().toUpperCase()) {
+            		if (d.gene_name == $("#search_term").val().toUpperCase()) {
             			return "hilight";
             		} else {
             			return d.gene_biotype;
@@ -276,27 +285,27 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             })
             .attr("marker-start", function (d) {
 				var bt = d.gene_biotype;
-				if (d.gene_name == $("#gene").val().toUpperCase()) {
+				if (d.gene_name == $("#search_term").val().toUpperCase()) {
 					bt = 'hilight';
 				}
 				if (d.strand == "-") return ("url(#lharrow_" + bt + ")");
 			})
             .attr("marker-end", function (d) {
 				var bt = d.gene_biotype;
-				if (d.gene_name == $("#gene").val().toUpperCase()) {
+				if (d.gene_name == $("#search_term").val().toUpperCase()) {
 					bt = 'hilight';
 				}
 				if (d.strand == "+") return ("url(#rharrow_" + bt + ")");
 			})
             .on("click", function (d) {
             console.log("Mouse Click !" + d.gene_name);
-            $("#gene").val(d.gene_name);
-            var gene = $("#gene").val().toUpperCase();
+            $("#search_term").val(d.gene_name);
+            var term = $("#search_term").val().toUpperCase();
             div.transition()
                 .duration(500)
                 .style("opacity", 0);
             d3.selectAll("svg").remove();
-            renderHic(gene, tissue, diameter, 1);
+            renderHic(term, tissue, diameter, 1);
             return false;
         })
             .on("mouseover", function (d, i) {
@@ -314,7 +323,18 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
                 .duration(500)
                 .style("opacity", 0);
             d3.select(this).style("opacity", 1);
-        })
+        });
+				
+			gene.append("text")
+                .style("text-align", "left")
+                .attr("class", "svg_only")
+                .attr("transform", function (d) {
+                		return (computePointPath(d.start, d.end, 0, 0, 0, (diameter * 0.36) + (d.bumpLevel * 15), totalBP, diameter))
+                })
+				.text(function (d) {
+                		console.log(d.gene_name);
+                		return d.gene_name;
+                });
 
 
         // add hic links
@@ -327,8 +347,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
         var score = 5;
 
         vis.append("g").attr("class", "middle hic").selectAll("svg")
-        //.data(hics.filter(function(d){ return parseFloat(d[tissue]) >= score; }))
-        .data(hics)
+        	.data(hics)
             .enter()
             .append("path")
             .attr("id", function (d, i) {
@@ -340,21 +359,18 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             		for (var i=0;i<meta.tissues.length;i++) {
             			if (parseFloat(d[meta.tissues[i]]) >= score){
             				classes += " "+meta.tissues[i];
+            				tissues[meta.tissues[i]]++;
             			}
             		}
             		return classes;
             })
             .attr("display", "none")
-            //.attr("style", "display:none")
             .attr("d", function (d) {
-            //return computePath(d.baitStart,d.oeEnd,150,data.meta.rend - data.meta.rstart);
             return computePath(d.baitStart + ((d.baitEnd - d.baitStart) / 2), d.oeStart + ((d.oeEnd - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
         })
             .attr("transform", trans)
             .attr("fill", "none")
             .attr("stroke", function (d) {
-            //return 'green';
-            //return color(d.B23_CD4_Naive_D3_4)
             tissue = $("input:radio[name=tissue]:checked").val();
             return color(d[tissue]);
         })
@@ -365,7 +381,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 						.duration(200)
 						.style("opacity", 0.9);
 					
-					div.html("HicCup score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
+					div.html("CHiCAGO score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
 					
 					vis.selectAll("path.interaction").sort(function (a, b) {
 							if (a[tissue] > b[tissue]) return 1;
@@ -385,7 +401,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 
             vis.append("path")
                 .attr("class", "deleteMe")
-                .attr("d", computeArcPath(d.oeStart, d.oeEnd, diameter * 0.28, diameter / 2, totalBP))
+                .attr("d", computeArcPath(d.oeStart, d.oeEnd, diameter * 0.28, diameter / 2.5, totalBP))
                 .style("stroke-width", 1)
                 .style("stroke", "red")
                 .attr("transform", trans)
@@ -393,7 +409,7 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 
             vis.append("path")
                 .attr("class", "deleteMe")
-                .attr("d", computeArcPath(d.baitStart, d.baitEnd, diameter * 0.28, diameter / 2, totalBP))
+                .attr("d", computeArcPath(d.baitStart, d.baitEnd, diameter * 0.28, diameter / 2.5, totalBP))
                 .style("stroke-width", 1)
                 .style("stroke", "blue")
                 .attr("transform", trans)
@@ -431,12 +447,8 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
 					drawRegionPanel("bait", meta.rchr, (d.baitStart + parseInt(meta.ostart)), (d.baitEnd + parseInt(meta.ostart)), maxscore);
 					drawRegionPanel("target", meta.rchr, (d.oeStart + parseInt(meta.ostart)), (d.oeEnd + parseInt(meta.ostart)), maxscore);
         });
-
-        function log10(val) {
-            return Math.log(val) / Math.LN10;
-        }
+        
         var thresh = -1 * log10(1e-1);
-        //var thresh = -1 * log10(1e-5);
         var symb = d3.svg.symbol();
         symb.size(10);
         vis.append("g").attr("class", "track snps").selectAll("svg")
@@ -487,7 +499,11 @@ function renderHic(gene, tissue, diameter, breadcrumb) {
             .attr("transform", trans)
             .attr("fill", "none");
         // end of JSON call
-        vis.selectAll("path.interaction."+tissue).attr("display", "inline");  
+        vis.selectAll("path.interaction."+tissue).attr("display", "inline");
+        
+        for(var t in tissues) {
+        	$("#"+t+"_count").text("("+tissues[t]+")");
+        }        
     });
 }
 
@@ -729,27 +745,27 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 	});	
 }
 
-function resetPage(gene, tissue, breadcrumb) {
+function resetPage(term, tissue, breadcrumb) {
     d3.selectAll("svg").remove();
-    $("#gene").val(gene);
-    $("#page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    $("#search_term").val(term);
+    $("#page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
     $("#footer-bait").html("&nbsp;");
     $("#footer-target").html("&nbsp;");
-    if (breadcrumb) $("#breadcrumb").append('<li id="BC-' + gene + '"><a href="#" onclick=\'javascript:d3.selectAll("svg").remove(); $("#BC-' + gene + '").remove(); renderHic("' + gene + '", $("input:radio[name=tissue]:checked").val(), 750, 1)\'>' + gene + '</a></li>');
+    if (breadcrumb) $("#breadcrumb").append('<li id="BC-' + term + '"><a href="#" onclick=\'javascript:d3.selectAll("svg").remove(); $("#BC-' + term + '").remove(); renderHic("' + term + '", $("input:radio[name=tissue]:checked").val(), 750, 1)\'>' + term + '</a></li>');
 }
 
 $(document).ready(function () {
     $("#pushme").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
     		var diameter = 750;
-    		var gene = $("#gene").val().toUpperCase();
-    		renderHic(gene, tissue, diameter, 1)
+    		var term = $("#search_term").val();
+    		renderHic(term, tissue, diameter, 1)
     		return (false);
     });
 
     $("input:radio[name=tissue]").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
-    		var gene = $("#gene").val().toUpperCase();
+    		var gene = $("#search_term").val();
     		$("#page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
     		
     		d3.select("#svg-container").selectAll(".deleteClick").remove();
@@ -769,6 +785,6 @@ $(document).ready(function () {
     });
 });
 
-var geneParam = getQueryVariable("gene");
-if (geneParam == undefined){ geneParam = 'IL2RA'; }
-renderHic(geneParam, 'Total_CD4_Activated', 750, 1)
+var termParam = getQueryVariable("term");
+if (termParam == undefined){ termParam = 'IL2RA'; }
+renderHic(termParam, 'Total_CD4_Activated', 750, 1)
