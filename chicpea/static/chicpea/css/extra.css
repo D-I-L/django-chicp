@@ -119,6 +119,7 @@ div.tooltip {
 	pointer-events: none;
 }
 
+.svg_only { display:none; }
 svg { font: 12px sans-serif; }
 svg .panel-seq { font-size: 10px; }
 
