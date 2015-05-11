@@ -54,8 +54,8 @@
 				<ul class="nav nav-sidebar">
 					<form class="navbar-form navbar-left" role="search" name="search">
 						<div class="form-group">
-							<input type="text" class="form-control" placeholder="Gene Name"
-								id="gene" value="{{ geneName }}" style="text-transform: uppercase">
+							<input type="text" class="form-control" placeholder="Search Term"
+								id="search_term" value="{{ searchTerm }}">
 						</div>
 						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
 						<div class="panel panel-default" style="margin-top: 20px">
@@ -66,7 +66,7 @@
 									<div class="radio tissue" style="display: block">
 										<label><input type="radio" name="tissue" value="{{ t.value }}"
 										{% if t.value ==  tissue %}checked="checked"{% endif %}
-										>&nbsp;{{ t.text }}</label>
+										>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
 									</div>
 						{% endfor %}
 								</div>
@@ -76,9 +76,9 @@
 							<div class="panel-heading">GWAS Data</div>
 							<div class="panel-body">
 								<div class="form-group">
-									<div class="radio gwas" style="display: block">
-										<label><input type="radio" name="gwas" value="barrett" checked="checked">&nbsp;T1D - Barrett <em>et al.</em></label>
-									</div>
+									<select class="form-control gwas" name="gwas" >
+										<option value="barrett">T1D - Barrett <em>et al.</em></option>
+									</select>
 								</div>
 							</div>
 						</div>
@@ -143,7 +143,7 @@
 			id="data-main" name="data-main" value=""> <input
 			type="hidden" id="data-bait" name="data-bait" value=""> <input
 			type="hidden" id="data-target" name="data-target" value=""> <input
-			type="hidden" id="geneName" name="geneName" value=""> <input
+			type="hidden" id="searchTerm" name="searchTerm" value=""> <input
 			type="hidden" id="tissue" name="tissue" value=""> <input
 			type="hidden" id="css-styles" name="css-styles" value="">
 	</form>
@@ -172,7 +172,7 @@
  
 			var s = document.createElement('style');
 			s.setAttribute('type', 'text/css');
-			s.innerHTML = "<![CDATA[\n" + used + "]]>";
+			s.innerHTML = "<![CDATA[\n" + used + "svg_only{ display:inline; }\n]]>";
 			
 			return s.innerHTML;
 		}
@@ -194,7 +194,8 @@
 			$("#data-main").val((new XMLSerializer).serializeToString($("#main-svg")[0]));
 			$("#data-bait").val(baitSVG);
 			$("#data-target").val(targetSVG);
-			$("#geneName").val($("#gene").val().toUpperCase());
+			//$("#geneName").val($("#gene").val().toUpperCase());
+			$("#searchTerm").val($("#search_term").val());
 			$("#tissue").val($("input:radio[name=tissue]:checked").val());
 			$("#css-styles").val(styles());
 			$("#svgform").submit();
