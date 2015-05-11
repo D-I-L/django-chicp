@@ -67,7 +67,7 @@ class ChicpeaTestCase(TestCase):
         ''' Test chicpea search for a region '''
         region = 'X:49683685-49687969'
         request = self.factory.get("/chicpea/search?region="+region)
-        response = chicpeaSearch(request)
+        response = chicpeaSearch(request, "/chicpea/search?region="+region)
         self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_snp(self):
