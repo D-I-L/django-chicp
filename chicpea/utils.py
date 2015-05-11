@@ -4,7 +4,7 @@
 import re
 
 
-hicFields = ['ensg', 'baitEnd', 'baitStart', 'oeStart', 'oeEnd', 'oeID', 'baitID', 'baitChr', "name"]
+hicFields = ['baitEnd', 'baitStart', 'oeStart', 'oeEnd', 'oeID', 'baitID', 'baitChr']
 geneFields = ['start', 'end', 'strand', 'attr.gene_name', 'attr.gene_biotype', 'attr.gene_id']
 snpFields = ['start', 'end', 'score', 'attr.Name']
 tissues = []
