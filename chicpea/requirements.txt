@@ -1,2 +1,2 @@
 -e git+http://github.com/btel/svg_utils.git#egg=svgutils
--e git+http://github.com/tcarver/django-elastic.git@develop#egg=elastic
+-e git+http://github.com/D-I-L/django-elastic.git@develop#egg=elastic
