@@ -76,8 +76,10 @@
 							<div class="panel-heading">GWAS Data</div>
 							<div class="panel-body">
 								<div class="form-group">
-									<select class="form-control gwas" name="gwas" >
-										<option value="barrett">T1D - Barrett <em>et al.</em></option>
+									<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
+									{% for t in snpTracks %}
+										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+									{% endfor %}
 									</select>
 								</div>
 							</div>
@@ -138,14 +140,18 @@
 	<!-- Hidden <FORM> to submit the SVG data to the server, which will convert it to SVG/PDF/PNG downloadable file.
 		The form is populated and submitted by the JavaScript below. -->
 	<form id="svgform" method="post" action="/chicpea/download">
-		{% csrf_token %} <input type="hidden" id="output_format"
-			name="output_format" value=""> <input type="hidden"
-			id="data-main" name="data-main" value=""> <input
-			type="hidden" id="data-bait" name="data-bait" value=""> <input
-			type="hidden" id="data-target" name="data-target" value=""> <input
-			type="hidden" id="searchTerm" name="searchTerm" value=""> <input
-			type="hidden" id="tissue" name="tissue" value=""> <input
-			type="hidden" id="css-styles" name="css-styles" value="">
+		{% csrf_token %}
+		<input type="hidden" id="output_format" name="output_format" value="">
+		<input type="hidden" id="data-main" name="data-main" value="">
+		<input type="hidden" id="data-bait" name="data-bait" value="">
+		<input type="hidden" id="data-target" name="data-target" value="">
+		<input type="hidden" id="searchTerm" name="searchTerm" value="">
+		<input type="hidden" id="tissue" name="tissue" value="">
+		<input type="hidden" id="snp_track" name="snp_track" value="">
+		<input type="hidden" id="css-styles" name="css-styles" value="">
+		<input type="hidden" id="totalBP" name="totalBP" value="">
+		<input type="hidden" id="region" name="region" value="">
+		<input type="hidden" id="maxScore" name="maxScore" value="">
 	</form>
 
 	<!-- Bootstrap core JavaScript
@@ -154,6 +160,7 @@
 	<script
 		src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
 	<script type="text/javascript">
 		function styles() {
 			var used = "";
@@ -194,11 +201,25 @@
 			$("#data-main").val((new XMLSerializer).serializeToString($("#main-svg")[0]));
 			$("#data-bait").val(baitSVG);
 			$("#data-target").val(targetSVG);
-			//$("#geneName").val($("#gene").val().toUpperCase());
 			$("#searchTerm").val($("#search_term").val());
 			$("#tissue").val($("input:radio[name=tissue]:checked").val());
+			$("#snp_track").val($("#gwas").val());
 			$("#css-styles").val(styles());
 			$("#svgform").submit();
+		}
+		function switch_snp_track(selectObj) {
+			var region = $("#region").val();
+			var tissue = $("input:radio[name=tissue]:checked").val();
+			var gwas = selectObj.options[selectObj.selectedIndex].value;
+			$.isLoading({ text: "Loading" });
+			d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+				if (error) {$.isLoading( "hide" ); return console.warn(error);}
+				d3.select("#svg-container").selectAll(".track.snps").remove();
+	    		resetVis();
+		        var totalBP = data.meta.rend - data.meta.rstart;
+		        $("#maxScore").val(addSNPTrack(data.meta, data.snps, totalBP));
+		        $.isLoading( "hide" );
+			});
 		}
 		$(document).ready(function() {
 			$("#save_as_svg").click(function() {
