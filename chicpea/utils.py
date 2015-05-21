@@ -6,7 +6,7 @@ import re
 
 hicFields = ['baitEnd', 'baitStart', 'oeStart', 'oeEnd', 'oeID', 'baitID', 'baitChr']
 geneFields = ['start', 'end', 'strand', 'attr.gene_name', 'attr.gene_biotype', 'attr.gene_id']
-snpFields = ['start', 'end', 'score', 'attr.Name']
+snpFields = ['start', 'end', 'score', 'name']
 tissues = []
 sampleLookup = {'Naive_CD4': ['C002Q1H1', 'C002TWH1', 'S007G7H4', 'S007DDH2'],
                 'Megakaryocytes': ['S004BTH2'],
