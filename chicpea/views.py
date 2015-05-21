@@ -1,3 +1,4 @@
+import operator
 import os
 import re
 from svgutils.templates import VerticalLayout, ColumnLayout
@@ -8,10 +9,10 @@ from django.conf import settings
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
 
+from chicpea import chicpea_settings
 from chicpea import utils
 from elastic.elastic_model import Search, BoolQuery, Query, RangeQuery, \
-    ElasticQuery, OrFilter
-from elastic.elastic_settings import ElasticSettings
+    ElasticQuery, Filter
 
 
 # Create your views here.
@@ -22,7 +23,6 @@ def chicpea(request):
     context['tissue'] = 'Total_CD4_Activated'
     if queryDict.get("term"):
         context['searchTerm'] = queryDict.get("term")
-        print("term = "+queryDict.get("term"))
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
 
@@ -34,6 +34,16 @@ def chicpea(request):
     for t in tissueList:
         tissues.append({"value": t, "text": t.replace("_", " ")})
     context['allTissues'] = tissues
+
+    snp_tracks = list()
+    for track in getattr(chicpea_settings, 'CHICP_IDX'):
+        snp_tracks.append({"value": track, "text":  getattr(chicpea_settings, 'CHICP_IDX').get(track).get('NAME')})
+    context['snpTracks'] = snp_tracks
+    if queryDict.get("snp_track"):
+        context['snp_track'] = queryDict.get("snp_track")
+    else:
+        context['snp_track'] = snp_tracks[0].get('value')
+
     return render(request, 'chicpea/index.html', context, content_type='text/html')
 
 
@@ -42,6 +52,7 @@ def chicpeaSearch(request, url):
     tissue = queryDict.get("tissue")
     blueprint = {}
     hic = []
+    addList = []
 
     if queryDict.get("region"):
         region = queryDict.get("region")
@@ -65,7 +76,6 @@ def chicpeaSearch(request, url):
     elif queryDict.get("searchTerm"):
         if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
             snp = queryDict.get("searchTerm").lower()
-            print("search term = "+snp)
 
             query = ElasticQuery.query_match("id", snp)
             elastic = Search(query, idx='dbsnp138')
@@ -73,6 +83,8 @@ def chicpeaSearch(request, url):
             if (len(snpResult['data']) > 0):
                 chrom = snpResult['data'][0]['seqid']
                 position = snpResult['data'][0]['start']
+
+                addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': snp})
 
                 query_bool = BoolQuery()
                 query_bool.must([Query.term("baitChr", chrom),
@@ -124,15 +136,21 @@ def chicpeaSearch(request, url):
     genes = [utils.flattenAttr(o) for o in genes]
     for o in genes:
         o.update({"bumpLevel": 0})
+        o.update({"length": (o['end']-o['start'])})
+    genes.sort(key=operator.itemgetter('length'))
 
     # get SNPs based on this segment
-    snpQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                          size=2000000, idx='gb2_hg19_gwas_t1d_barrett_4_17_0/gff',
-                                          field_list=utils.snpFields)
+    snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(queryDict.get("snp_track")).get('INDEX')
+
+    query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
+                                  Filter(RangeQuery("end", gte=segmin, lte=segmax)),
+                                  utils.snpFields)
+    snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx)
+
     snpResult = snpQuery.get_result()
     snps = snpResult['data']
     snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
-    snps = [utils.flattenAttr(o) for o in snps]
+    addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
 
     retJSON = {"hic": hic,
                "meta": {"ostart": int(segmin),
@@ -144,7 +162,8 @@ def chicpeaSearch(request, url):
                "snps": snps,
                "genes": genes,
                "region": str(chrom) + ":" + str(segmin) + "-" + str(segmax),
-               "blueprint": blueprint
+               "blueprint": blueprint,
+               "extra": addList
                }
 
     response = JsonResponse(retJSON)
@@ -158,6 +177,10 @@ def chicpeaDownload(request, url):
     CSS = queryDict.get("css-styles")
     tissue = queryDict.get("tissue").replace(' ', '_')
     returnFileName = 'CHICPEA-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
+
+    # f1 = fromstring(SVG)
+    # f1.set_size([750, 750])
+    # print(f1.get_size())
 
     if queryDict.get("data-bait") and queryDict.get("data-target"):
         s1 = queryDict.get("data-bait")
@@ -175,6 +198,7 @@ def chicpeaDownload(request, url):
         layout._generate_layout()
         SVG = layout.to_str().decode()
 
+    SVG = SVG.replace('<svg ', '<svg style="padding:40px;" ')
     SVG = SVG.replace("</svg>",
                       '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
@@ -218,11 +242,7 @@ def _build_hic_query(query):
     segmin = 0
     segmax = 0
 
-#    if query_filter is None:
-#        elasticQuery = ElasticQuery(query, sources=utils.hicFields + utils.tissues)
-#    else:
-#        elasticQuery = ElasticQuery.filtered_bool(query_filter, query, sources=utils.hicFields + utils.tissues)
-    hicElastic = Search(query, idx='chicpea_gene_target')
+    hicElastic = Search(query, idx='chicpea_gene_target', search_from=0, size=2000)
     hicResult = hicElastic.get_result()
     if len(hicResult['data']) > 0:
         hic = hicResult['data']
