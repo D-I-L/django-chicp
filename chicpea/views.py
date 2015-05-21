@@ -11,8 +11,8 @@ from django.shortcuts import render
 
 from chicpea import chicpea_settings
 from chicpea import utils
-from elastic.elastic_model import Search, BoolQuery, Query, RangeQuery, \
-    ElasticQuery, Filter
+from elastic.search import Search, ElasticQuery
+from elastic.query import BoolQuery, Query, RangeQuery, Filter
 
 
 # Create your views here.
