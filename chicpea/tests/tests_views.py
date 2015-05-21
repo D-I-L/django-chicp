@@ -25,7 +25,7 @@ class ChicpeaTestCase(TestCase):
 
     def test_page_with_hgnc(self):
         ''' Test chicpea page with HGNC Gene name '''
-        response = self.client.get(reverse('chicpea:chicpea') + '?searchTerm=DEXI')
+        response = self.client.get(reverse('chicpea:chicpea') + '?term=DEXI')
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         self.assertIn(b'DEXI', response.content)
@@ -36,7 +36,7 @@ class ChicpeaTestCase(TestCase):
 
     def test_page_with_ensg(self):
         ''' Test chicpea page with EnsEMBL Gene '''
-        response = self.client.get(reverse('chicpea:chicpea') + '?searchTerm=ENSG00000182108')
+        response = self.client.get(reverse('chicpea:chicpea') + '?term=ENSG00000182108')
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         self.assertIn(b'ENSG00000182108', response.content)
@@ -44,7 +44,7 @@ class ChicpeaTestCase(TestCase):
     def test_page_with_geneerror(self):
         ''' Test chicpea page with EnsEMBL Gene '''
         geneName = 'ENSG00000'
-        response = self.client.get(reverse('chicpea:chicpea') + '?searchTerm='+geneName)
+        response = self.client.get(reverse('chicpea:chicpea') + '?term='+geneName)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         # str_error = 'Gene name '+geneName+' not found in this dataset'
