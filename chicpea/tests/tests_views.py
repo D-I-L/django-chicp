@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 
 from chicpea.views import chicpea, chicpeaSearch
-from elastic.elastic_model import Search
+from elastic.search import Search
 
 
 class ChicpeaTestCase(TestCase):
