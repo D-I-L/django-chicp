@@ -36,7 +36,7 @@ class ChicpeaTestCase(TestCase):
 
     def test_page_with_ensg(self):
         ''' Test chicpea page with EnsEMBL Gene '''
-        response = self.client.get(reverse('chicpea:chicpea') + '?gene=ENSG00000182108')
+        response = self.client.get(reverse('chicpea:chicpea') + '?searchTerm=ENSG00000182108')
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         self.assertIn(b'ENSG00000182108', response.content)
@@ -44,7 +44,7 @@ class ChicpeaTestCase(TestCase):
     def test_page_with_geneerror(self):
         ''' Test chicpea page with EnsEMBL Gene '''
         geneName = 'ENSG00000'
-        response = self.client.get(reverse('chicpea:chicpea') + '?gene='+geneName)
+        response = self.client.get(reverse('chicpea:chicpea') + '?searchTerm='+geneName)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         # str_error = 'Gene name '+geneName+' not found in this dataset'
@@ -59,23 +59,23 @@ class ChicpeaTestCase(TestCase):
         ''' Test chicpea search for a gene & tissue '''
         geneName = 'IL2RA'
         tissue = 'Monocytes'
-        request = self.factory.get("/chicpea/search?searchTerm="+geneName+"&tissue="+tissue)
-        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+geneName+"&tissue="+tissue)
+        request = self.factory.get("/chicpea/search?searchTerm="+geneName+"&tissue="+tissue+"&snp_track=barrett")
+        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+geneName+"&tissue="+tissue+"&snp_track=barrett")
         self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_region(self):
         ''' Test chicpea search for a region '''
         region = 'X:49683685-49687969'
-        request = self.factory.get("/chicpea/search?region="+region)
-        response = chicpeaSearch(request, "/chicpea/search?region="+region)
+        request = self.factory.get("/chicpea/search?region="+region+"&snp_track=barrett")
+        response = chicpeaSearch(request, "/chicpea/search?region="+region+"&snp_track=barrett")
         self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_snp(self):
         ''' Test chicpea search for a gene & tissue '''
         snp = 'rs2476601'
         tissue = 'Erythroblasts'
-        request = self.factory.get("/chicpea/search?searchTerm="+snp+"&tissue="+tissue)
-        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+snp+"&tissue="+tissue)
+        request = self.factory.get("/chicpea/search?searchTerm="+snp+"&tissue="+tissue+"&snp_track=barrett")
+        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+snp+"&tissue="+tissue+"&snp_track=barrett")
         self._HICtest(str(response.content, encoding='utf8'))
 
     def _HICtest(self, json):
