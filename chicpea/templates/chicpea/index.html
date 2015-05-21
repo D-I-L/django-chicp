@@ -1,0 +1,237 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="">
+<meta name="author" content="">
+<link rel="icon" href="/static/favicon.ico">
+
+<title>Chicpea</title>
+
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet"
+	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+<link rel="stylesheet"
+	href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+<!-- Custom styles for this template -->
+<link href="{% static "chicpea/css/extra.css" %}" rel="stylesheet">
+
+<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+<!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+<script type="text/javascript"
+	src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.13/d3.min.js"></script>
+<script type="text/javascript"
+	src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+</head>
+
+<body>
+	<nav class="navbar navbar-inverse navbar-fixed-top">
+		<div class="container-fluid">
+			<div class="navbar-header">
+				<button type="button" class="navbar-toggle collapsed"
+					data-toggle="collapse" data-target="#navbar" aria-expanded="false"
+					aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span> <span
+						class="icon-bar"></span> <span class="icon-bar"></span> <span
+						class="icon-bar"></span>
+				</button>
+				<a class="navbar-brand" href="/chicpea/">CHICPea</a>
+			</div>
+		</div>
+	</nav>
+
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-sm-3 col-md-2 sidebar">
+				<ul class="nav nav-sidebar">
+					<form class="navbar-form navbar-left" role="search" name="search">
+						<div class="form-group">
+							<input type="text" class="form-control" placeholder="Search Term"
+								id="search_term" value="{{ searchTerm }}">
+						</div>
+						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
+						<div class="panel panel-default" style="margin-top: 20px">
+							<div class="panel-heading">Tissue Types</div>
+							<div class="panel-body">
+								<div class="form-group">
+						{% for t in allTissues %}
+									<div class="radio tissue" style="display: block">
+										<label><input type="radio" name="tissue" value="{{ t.value }}"
+										{% if t.value ==  tissue %}checked="checked"{% endif %}
+										>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
+									</div>
+						{% endfor %}
+								</div>
+							</div>
+						</div>
+						<div class="panel panel-default" style="margin-top: 20px">
+							<div class="panel-heading">GWAS Data</div>
+							<div class="panel-body">
+								<div class="form-group">
+									<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
+									{% for t in snpTracks %}
+										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+									{% endfor %}
+									</select>
+								</div>
+							</div>
+						</div>
+					</form>
+				</ul>
+			</div>
+
+			<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+				<span style="float: right">
+					<button class="btn btn-primary" id="save_as_svg" value="">
+						<i class="fa fa-floppy-o"></i>&nbsp;SVG
+					</button>
+					<!-- <button class="btn btn-primary" id="save_as_pdf" value="">
+						<i class="fa fa-floppy-o"></i>&nbsp;PDF
+					</button>
+					<button class="btn btn-primary" id="save_as_png" value="">
+						<i class="fa fa-floppy-o"></i>&nbsp;PNG
+					</button> -->
+				</span>
+				<h1 class="page-header" id="page_header"></h1>
+				<ol class="breadcrumb" id="breadcrumb">
+					<li><a href="/chicpea/">Start</a></li>
+				</ol>
+				<div class="row">
+					<div class="col-sm-6">
+						<div id="svg-container"></div>
+					</div>
+					<div class="col-sm-6">
+						<div class="row">
+							<div class="col-sm-12">
+								<div class="panel panel-info">
+									<div class="panel-heading">
+									<span id="footer-bait" style="font-size:0.9em; font-style:italic; float:right">&nbsp;</span>
+										<h3 class="panel-title">Bait</h3>
+									</div>
+									<div style="height: 300px;" class="panel-body panel-seq" id="panel-bait"></div>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-sm-12">
+								<div class="panel panel-danger">
+									<div class="panel-heading">
+										<span id="footer-target" style="font-size: 0.9em; font-style: italic; float:right">&nbsp;</span>
+										<h3 class="panel-title">Target</h3>
+									</div>
+									<div style="height: 300px;" class="panel-body panel-seq" id="panel-target"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Hidden <FORM> to submit the SVG data to the server, which will convert it to SVG/PDF/PNG downloadable file.
+		The form is populated and submitted by the JavaScript below. -->
+	<form id="svgform" method="post" action="/chicpea/download">
+		{% csrf_token %}
+		<input type="hidden" id="output_format" name="output_format" value="">
+		<input type="hidden" id="data-main" name="data-main" value="">
+		<input type="hidden" id="data-bait" name="data-bait" value="">
+		<input type="hidden" id="data-target" name="data-target" value="">
+		<input type="hidden" id="searchTerm" name="searchTerm" value="">
+		<input type="hidden" id="tissue" name="tissue" value="">
+		<input type="hidden" id="snp_track" name="snp_track" value="">
+		<input type="hidden" id="css-styles" name="css-styles" value="">
+		<input type="hidden" id="totalBP" name="totalBP" value="">
+		<input type="hidden" id="region" name="region" value="">
+		<input type="hidden" id="maxScore" name="maxScore" value="">
+	</form>
+
+	<!-- Bootstrap core JavaScript
+		================================================== -->
+	<!-- Placed at the end of the document so the pages load faster -->
+	<script
+		src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
+	<script type="text/javascript">
+		function styles() {
+			var used = "";
+			var sheets = document.styleSheets;
+			for (var i = 0; i < sheets.length; i++) {
+				if (sheets[i].href.match(window.location.hostname)){
+					var rules = sheets[i].cssRules;
+					for (var j = 0; j < rules.length; j++) {
+						var rule = rules[j];
+						if ('undefined' !== typeof rule.selectorText && rule.selectorText.match(/^svg/)){
+							used += rule.selectorText + " { "+ rule.style.cssText + " }\n";
+						}
+					}
+				}
+			}
+ 
+			var s = document.createElement('style');
+			s.setAttribute('type', 'text/css');
+			s.innerHTML = "<![CDATA[\n" + used + "svg_only{ display:inline; }\n]]>";
+			
+			return s.innerHTML;
+		}
+		
+		function submit_download_form(output_format) {
+			baitSVG = "";
+			targetSVG = "";
+
+			if ($("svg").length == 3) {
+				baitSVG = (new XMLSerializer)
+						.serializeToString($("#bait-svg")[0]);
+				targetSVG = (new XMLSerializer)
+						.serializeToString($("#target-svg")[0]);
+			}
+
+			// Submit the <FORM> to the server.
+			// The result will be an attachment file to download.
+			$("#output_format").val(output_format);
+			$("#data-main").val((new XMLSerializer).serializeToString($("#main-svg")[0]));
+			$("#data-bait").val(baitSVG);
+			$("#data-target").val(targetSVG);
+			$("#searchTerm").val($("#search_term").val());
+			$("#tissue").val($("input:radio[name=tissue]:checked").val());
+			$("#snp_track").val($("#gwas").val());
+			$("#css-styles").val(styles());
+			$("#svgform").submit();
+		}
+		function switch_snp_track(selectObj) {
+			var region = $("#region").val();
+			var tissue = $("input:radio[name=tissue]:checked").val();
+			var gwas = selectObj.options[selectObj.selectedIndex].value;
+			$.isLoading({ text: "Loading" });
+			d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+				if (error) {$.isLoading( "hide" ); return console.warn(error);}
+				d3.select("#svg-container").selectAll(".track.snps").remove();
+	    		resetVis();
+		        var totalBP = data.meta.rend - data.meta.rstart;
+		        $("#maxScore").val(addSNPTrack(data.meta, data.snps, totalBP));
+		        $.isLoading( "hide" );
+			});
+		}
+		$(document).ready(function() {
+			$("#save_as_svg").click(function() {
+				submit_download_form("svg");
+			});
+			$("#save_as_pdf").click(function() {
+				submit_download_form("pdf");
+			});
+			$("#save_as_png").click(function() {
+				submit_download_form("png");
+			});
+		});
+	</script>
+</body>
+</html>

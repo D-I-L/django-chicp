@@ -1,0 +1,4 @@
+include README.md
+recursive-include chicpea/static *
+recursive-include chicpea/templates *
+recursive-include chicpea/tests *
