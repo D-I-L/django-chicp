@@ -11,7 +11,7 @@ CHICP_IDX = OrderedDict([
     ('ob-pmi_hb', {'NAME': "Haemoglobin", 'INDEX': 'cp:hg19_ob-pmi_hb'}),
     ('ob-pmi_height', {'NAME': "Height", 'INDEX': 'cp:hg19_ob-pmi_height'}),
     ('ob-pmi_mchc', {'NAME': "Mean Corpuscular Haemoglobin Concentration", 'INDEX': 'cp:hg19_ob-pmi_mchc'}),
-    ('ob-pmi_mch', {'NAME': "Mean corpuscular Haemoglobin", 'INDEX': 'cp:hg19_ob-pmi_mch'}),
+    ('ob-pmi_mch', {'NAME': "Mean Corpuscular Haemoglobin", 'INDEX': 'cp:hg19_ob-pmi_mch'}),
     ('ob-pmi_mcv', {'NAME': " Mean Corpuscular Volume", 'INDEX': 'cp:hg19_ob-pmi_mcv'}),
     ('ob-pmi_ms', {'NAME': "Multiple Sclerosis", 'INDEX': 'cp:hg19_ob-pmi_ms'}),
     ('ob-pmi_pcv', {'NAME': "Packed Cell Volume/Haematocrit", 'INDEX': 'cp:hg19_ob-pmi_pcv'}),
