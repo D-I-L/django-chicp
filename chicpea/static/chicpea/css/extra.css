@@ -135,6 +135,7 @@ svg .blueprint path { stroke-width: 6; fill: none;}
 svg .genes path.line { stroke-width: 0; fill: none;}
 
 svg .updateClick { stroke: yellow !important; stroke-width: 6px !important; }
+svg .segSelect { opacity: 0.3; }
 
 svg .genes path.hilight { stroke: yellow; }
 svg .genes path.misc_RNA { stroke: #ff7f0e; }
