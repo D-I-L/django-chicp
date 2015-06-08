@@ -4,6 +4,12 @@ var interactionScore = 5;
 var interactionColor = d3.scale.linear().domain([interactionScore, 20]).range(["blue", "red"]);
 var start, CHR, totalBP, region;
 var pi = Math.PI;  
+var selecting = 0;
+
+var angleOffset = 5,
+	arcAvail = 360 - (2 * angleOffset),
+	startAngle = (angleOffset * pi)/180,
+	endAngle = ((arcAvail + angleOffset) * pi) / 180;
     		
 function getQueryVariable(variable) {
 	var query = window.location.search.substring(1);
@@ -143,7 +149,7 @@ function computeArcPath(start, end, r1, r2, totalBP) {
 function computePointPath(start, end, score, minscore, maxscore, r, totalBP, diameter) {
     var adjMaxscore = maxscore - minscore;
     var adjScore = score - minscore;
-    var trackwidth = diameter * 0.05;
+    var trackwidth = diameter * 0.04;
     var radius = r;
     if (adjMaxscore > 0)
     	radius += ((parseFloat(adjScore) / adjMaxscore) * trackwidth)
@@ -235,10 +241,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 			.text($("#page_header").html());
 		
 		
-		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
-		
-		addCenterScale();
-		
+		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
 		
 		vis.append("g").attr("class", "left arrow_heads").selectAll("defs")
 			.data(Object.keys(bt))
@@ -282,80 +285,21 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 				else return d;
 		});
 		
-		if (extras.length > 0) addExtraData(extras);
 		
+		addSNPTrack(data.snps);
+		addCenterScale();
+		
+		if (extras.length > 0) addExtraData(extras);		
 		
 		//add gene track
+		addGeneTrack(data.meta, data.genes, totalBP);
 		
-		var gene = vis.append("g").attr("class", "track genes").selectAll("svg").data(genes).enter();
-		    
-		gene.append("path")
-			.attr("d", function (d) {
-				return (computeStrandPath(d.start, d.end, (diameter * 0.35) + (d.bumpLevel * 15), totalBP));
-			})
-			.attr("transform", trans)
-			.attr("class", function (d) {
-					if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
-						return "hilight";
-					} else {
-						return d.gene_biotype;
-					}
-			})
-			.attr("marker-start", function (d) {
-				var bt = d.gene_biotype;
-				if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
-					bt = 'hilight';
-				}
-				if (d.strand == "-") return ("url(#lharrow_" + bt + ")");
-			})
-			.attr("marker-end", function (d) {
-				var bt = d.gene_biotype;
-				if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
-					bt = 'hilight';
-				}
-				if (d.strand == "+") return ("url(#rharrow_" + bt + ")");
-			})
-			.on("click", function (d) {
-					$("#search_term").val(d.gene_name);
-					var term = $("#search_term").val().toUpperCase();
-					div.transition().duration(500).style("opacity", 0);
-					d3.selectAll("svg").remove();
-					renderHic(term, tissue, diameter, 1);
-					return false;
-			})
-			.on("mouseover", function (d, i) {
-				div.transition().duration(200).style("opacity", 0.9);
-				div.html(d.gene_name + "</br>" + d.gene_biotype + "</br>" + d.gene_id + "</br>" + numberWithCommas(parseInt(d.start) + start) + "</br>" + numberWithCommas(parseInt(d.end) + start))
-					.style("left", (d3.event.pageX) + "px")
-					.style("top", (d3.event.pageY - 28) + "px");
-					
-				d3.select(this).style("opacity", 0.3);
-			})
-			.on("mouseout", function (d) {
-					div.transition().duration(500).style("opacity", 0);
-					d3.select(this).style("opacity", 1);
-			});
-				
-/*			gene.append("text")
-		        .style("text-align", "left")
-		        .attr("class", "svg_only")
-		        .attr("transform", function (d) {
-		        		return (computePointPath(d.start, d.end, 0, 0, 0, (diameter * 0.36) + (d.bumpLevel * 15), totalBP, diameter))
-		        })
-				.text(function (d) {
-		        		//console.log(d.gene_name);
-		        		return d.gene_name;
-		        });*/
-		        
-		        
-		
-		$("#maxScore").val(addSNPTrack(data.meta, data.snps, totalBP));
+		//add SNP track
+		$("#maxScore").val(addSNPTrackPoints(data.meta, data.snps, totalBP));
 		
 		addInteractions(data.meta, hics, totalBP, tissues);
-			
-    	var angleOffset = 5,
-		arcAvail = 360 - (2 * angleOffset)
-		endAngle = (angleOffset * pi)/180,
+
+		var endAngle = (angleOffset * pi)/180,
 		startAngle = ((arcAvail + angleOffset) * pi) / 180;
 			
 		var arc = d3.svg.arc()
@@ -364,7 +308,13 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 	
 		vis.append("path").attr("d", arc).attr("id", "originWedge")
 			.attr("fill", "lightgrey")
-			.attr("transform", trans);
+			.attr("transform", trans)
+			.on("mouseout", function (d) {
+					if (selecting){
+						selecting = 0;
+						zoomIn(innerRadius, circAvail, angleOffset);
+					}
+			});;
 			
 				
 		var text = vis.append("text")
@@ -376,7 +326,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		
 		for(var t in tissues) {
 			$("#"+t+"_count").text("("+tissues[t]+")");
-		}   
+		}
 		
 		// end of JSON call     
 	});
@@ -387,22 +337,24 @@ function addCenterScale(){
 
     var innerRadius = diameter * 0.4,
     	outerRadius = innerRadius + 1,
-    	angleOffset = 5,
-		arcAvail = 360 - (2 * angleOffset),
-		startAngle = (angleOffset * pi)/180,
-		endAngle = ((arcAvail + angleOffset) * pi) / 180;
+		circum = 2 * innerRadius * pi,
+		circAvail = circum - ((2 * angleOffset) * (pi/180) * innerRadius);
     
-	tickData = getTickData(innerRadius, arcAvail, startAngle, endAngle);
+	tickData = getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAvail);
 	
 	var scale_group = vis.append("g").attr("class", "track scale")
 		.attr("id", "fullScale").selectAll("svg")
 		.data([1]).enter();
-			
+		
 	var arc = d3.svg.arc()
 		.innerRadius(innerRadius).outerRadius(outerRadius)
 		.startAngle(startAngle).endAngle(endAngle);
+			
+	var arc2 = d3.svg.arc()
+		.innerRadius(diameter * 0.28 - 10).outerRadius(outerRadius+50)
+		.startAngle(startAngle).endAngle(endAngle);
 	
-	scale_group.append("path").attr("d", arc).attr("id", "arcScale");
+	scale_group.append("path").attr("d", arc).attr("id", "arcScale");	
 	
 	var ticks = scale_group.append("g").attr("class", "axis scale ticks").selectAll("svg")
 		.data(tickData).enter()
@@ -426,13 +378,68 @@ function addCenterScale(){
 		.style("text-anchor", function(d) { return d.angle > pi ? "end" : null; })
 		.text(function(d) { return d.label; });
 	
+		
+		
+	
+	scale_group.append("path").attr("d", arc2).attr("id", "arcBackground").style("fill", "white").style("opacity", 0)
+			.on("mouseout", function (d) {
+					if (selecting){
+						selecting = 0;
+						zoomIn(innerRadius, circAvail, angleOffset);
+					}
+			});
+	
+	//var colors = d3.scale.linear().domain([angleOffset, arcAvail]).range(["pink", "purple"]);
+	var segmentData = [];
+	for (i=angleOffset; i<=arcAvail; i+=angleOffset){
+		segmentData.push(i);
+	}
+	var segments = scale_group.append("g").selectAll("svg").data(segmentData).enter();
+	segments.append("path")
+		.attr("d", d3.svg.arc()
+			.innerRadius(diameter * 0.28)
+			.outerRadius(outerRadius+40)
+			.startAngle(function(d){ return d*pi/180; })
+			.endAngle(function(d){ return (d+angleOffset)*pi/180; }))
+		.style("fill", "white").style("opacity", 0)
+		.attr("class", "segment")
+		.attr("id", function (d) { return "seg"+d; })
+		.on("click", function (d) {
+				if (selecting){
+					selecting = 0;
+					zoomIn(innerRadius, circAvail, angleOffset);
+				}
+				else{
+					d3.selectAll(".segment").classed("selected", false).style("fill", "white").style("opacity", 0);
+					d3.select(this).style("opacity", 0.2).style("fill",  "yellow");
+					//d3.select(this).style("opacity", 0.3).style("fill", colors(d));
+					d3.select(this).classed('selected', true);
+					//console.log(d);
+					//console.log(d3.select(this).attr("id"));
+					selecting = d;
+				}
+		})				
+		.on("mouseover", function(d){ 
+				if (selecting > 0){
+					if (selecting != d && selecting != d+angleOffset && selecting != d-angleOffset){
+						s1 = Math.min(selecting, d);
+						s2 = Math.max(selecting, d);
+						for (i=s1; i<s2; i+=angleOffset){
+							d3.select("path#seg"+i).style("opacity", 0.2).style("fill", "yellow");
+							d3.select("path#seg"+i).classed('selected', true);
+						}
+					}
+					//d3.select(this).style("opacity", 0.3).style("fill", colors(d));
+					d3.select(this).style("opacity", 0.2).style("fill", "yellow");
+					d3.select(this).classed('selected', true);
+				}
+		});
+	
 	vis.select("#fullScale").attr("transform", trans)
 }
 
-function getTickData(innerRadius, arcAvail, startAngle, endAngle){
+function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAvail){
 	
-	var circum = innerRadius * pi;
-	var circAvail = (((arcAvail * pi)/180)/(2 * pi)) * circum;
 	var end = start + totalBP;
 	
 	var data = [{'label': null, 'angle': startAngle, 'position': start}];
@@ -491,22 +498,124 @@ function addExtraData(extras){
 		});
 }
 
-function addSNPTrack(meta, snps, totalBP){
+function addGeneTrack(meta, genes, totalBP){
 	
 	var vis = d3.select("#main-svg");
 	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
 	var maxscore = 0;
 	var tissue = $("input:radio[name=tissue]:checked").val();
-	             
+	
+	var innerRadius = diameter * 0.35;
+	
+	var gene = vis.append("g").attr("class", "track genes").selectAll("svg").data(genes).enter();
+	    
+	gene.append("path")
+		.attr("d", function (d) {
+			return (computeStrandPath(d.start, d.end, innerRadius + (d.bumpLevel * 15), totalBP));
+		})
+		.attr("transform", trans)
+		.attr("class", function (d) {
+				if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
+					return "hilight";
+				} else {
+					return d.gene_biotype;
+				}
+		})
+		.attr("marker-start", function (d) {
+			var bt = d.gene_biotype;
+			if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
+				bt = 'hilight';
+			}
+			if (d.strand == "-") return ("url(#lharrow_" + bt + ")");
+		})
+		.attr("marker-end", function (d) {
+			var bt = d.gene_biotype;
+			if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
+				bt = 'hilight';
+			}
+			if (d.strand == "+") return ("url(#rharrow_" + bt + ")");
+		})
+		.on("click", function (d) {
+				$("#search_term").val(d.gene_name);
+				var term = $("#search_term").val().toUpperCase();
+				div.transition().duration(500).style("opacity", 0);
+				d3.selectAll("svg").remove();
+				renderHic(term, tissue, diameter, 1);
+				return false;
+		})
+		.on("mouseover", function (d, i) {
+			div.transition().duration(200).style("opacity", 0.9);
+			div.html(d.gene_name + "</br>" + d.gene_biotype + "</br>" + d.gene_id + "</br>" + numberWithCommas(parseInt(d.start) + start) + "</br>" + numberWithCommas(parseInt(d.end) + start))
+				.style("left", (d3.event.pageX) + "px")
+				.style("top", (d3.event.pageY - 28) + "px");
+				                                                                    
+			d3.select(this).style("opacity", 0.3);
+		})
+		.on("mouseout", function (d) {
+				div.transition().duration(500).style("opacity", 0);
+				d3.select(this).style("opacity", 1);
+		});
+			
+/*		gene.append("text")
+	        .style("text-align", "left")
+	        .attr("class", "svg_only")
+	        .attr("transform", function (d) {
+	        		return (computePointPath(d.start, d.end, 0, 0, 0, (diameter * 0.36) + (d.bumpLevel * 15), totalBP, diameter))
+	        })
+			.text(function (d) {
+	        		//console.log(d.gene_name);
+	        		return d.gene_name;
+	        });*/
+}
+
+function addSNPTrack(snps){
+	
+	var vis = d3.select("#main-svg");
+	var maxscore = 0;
+	var thresh = -1 * log10(1e-1);	
+	
 	for (var i = 0; i < snps.length; i++) {
 		if (snps[i].score > maxscore) {
 			maxscore = parseFloat(snps[i].score);
 		}
 	}
 	
-	var thresh = -1 * log10(1e-1);
+	var innerRadius = diameter * 0.29
+		outerRadius = innerRadius + (diameter * 0.05),
+		gwSigRadius = innerRadius+(parseFloat(7.03-thresh) / (maxscore-thresh)) * (outerRadius-innerRadius-(diameter*0.01))
+		
+	var arc = d3.svg.arc()
+		.innerRadius(innerRadius).outerRadius(outerRadius)
+		.startAngle(startAngle).endAngle(endAngle);
+		
+	var snpBackground = vis.append("g").attr("class", "track snps background").selectAll("svg")
+		.data([1]).enter();
+	
+	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.3).attr("transform", trans);
+	snpBackground.append("path")
+	.attr("d", d3.svg.arc()
+		.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
+		.startAngle(startAngle).endAngle(endAngle)
+	).style("fill", "white").attr("transform", trans);
+}
+
+function addSNPTrackPoints(meta, snps, totalBP){
+	
+	var vis = d3.select("#main-svg");
+	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
+	var maxscore = 0;
+	var tissue = $("input:radio[name=tissue]:checked").val();
+	var thresh = -1 * log10(1e-1);	
+	var innerRadius = diameter * 0.29;
+	
+	for (var i = 0; i < snps.length; i++) {
+		if (snps[i].score > maxscore) {
+			maxscore = parseFloat(snps[i].score);
+		}
+	}
+	
 	var symb = d3.svg.symbol();
-	symb.size(10);
+	symb.size(15);
 	vis.append("g").attr("class", "track snps").selectAll("svg")
 		.data(snps.filter(function (d) {
 				return parseFloat(d.score) >= thresh;
@@ -514,16 +623,18 @@ function addSNPTrack(meta, snps, totalBP){
 		.enter()
 		.append("path")
 		.attr("transform", function (d) {
-				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, diameter * 0.29, totalBP, diameter))
+				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
 		})
 		.attr("d", symb)
-		.attr("stroke", function (d) {
-				if (parseFloat(d.score) == maxscore) return "red";
-				return "black";
-		})
+//		.attr("stroke", function (d) {
+//				//if (parseFloat(d.score) == maxscore) return "red";
+//				if (parseFloat(d.score) >= 7.03) return "green";
+//				return "darkgrey";
+//		})
 		.attr("fill", function (d) {
-				if (parseFloat(d.score) == maxscore) return "red";
-				return "black";
+				//if (parseFloat(d.score) == maxscore) return "red";
+				if (parseFloat(d.score) >= 7.03) return "green";
+				return "darkgrey";
 		})
 		.on("mouseover", function (d, i) {
 				div.transition()
@@ -612,7 +723,7 @@ function pathDetails(interactions){
 	})
 	.on("mouseover", function (d, i) {
 			div.transition().duration(200).style("opacity", 0.9);
-			div.html("CHiCAGO score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
+			div.html("Score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
 			
 			vis.selectAll("path.interaction").sort(function (a, b) {
 					if (parseFloat(a[tissue]) < interactionScore) return -1;
@@ -760,12 +871,12 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("class", "marker")
 				.attr("d", d3.svg.symbol().size(30))
 				.attr("stroke", function (d) {
-					if (parseFloat(d.score) == maxscore) return "red";
+					//if (parseFloat(d.score) == maxscore) return "red";
 					if (parseFloat(d.score) >= 7.03) return "green";
 					return "lightgrey";
 				})
 				.attr("fill", function (d) {
-					if (parseFloat(d.score) == maxscore) return "red";
+					//if (parseFloat(d.score) == maxscore) return "red";
 					if (parseFloat(d.score) >= 7.03) return "green";
 					return "lightgrey";
 				})
@@ -945,6 +1056,25 @@ function resetVis() {
 	$("#footer-target").html("&nbsp;");
 }
 
+function zoomIn(innerRadius, circAvail, angleOffset){
+	selectedArray = d3.selectAll(".selected")[0];
+	if (selectedArray.length > 0) {
+		s1 = parseInt(selectedArray[0].id.replace("seg", ""))
+		s2 = parseInt(selectedArray[selectedArray.length-1].id.replace("seg", ""))
+		var l1 = (s1-angleOffset) * (pi/180) * innerRadius
+		var l2 = s2 * (pi/180) * innerRadius
+		var p1 = Math.ceil(start+(l1*(totalBP/circAvail)))
+		var p2 = Math.ceil(start+(l2*(totalBP/circAvail)))
+		var region = CHR+":"+p1+"-"+p2;
+		var gwas = $("#gwas").val();
+		var tissue = $("input:radio[name=tissue]:checked").val();
+		d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+				console.log(data);
+		});
+	}
+}
+	
+
 $(document).ready(function () {
     $("#pushme").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
@@ -965,4 +1095,7 @@ $(document).ready(function () {
 
 var termParam = getQueryVariable("term");
 if (termParam == undefined){ termParam = 'IL2RA'; }
-renderHic(termParam, 'Total_CD4_Activated', diameter, 1)
+$("input:radio[name=tissue]:first").attr('checked', true);
+var tissueParam = $("input:radio[name=tissue]:checked").val();
+renderHic(termParam, tissueParam, diameter, 1)
+//renderHic(termParam, 'Total_CD4_Activated', diameter, 1)
