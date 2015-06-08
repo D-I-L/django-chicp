@@ -73,12 +73,16 @@
 							</div>
 						</div>
 						<div class="panel panel-default" style="margin-top: 20px">
-							<div class="panel-heading">GWAS Data</div>
+							<div class="panel-heading">Association Statistics</div>
 							<div class="panel-body">
 								<div class="form-group">
 									<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
-									{% for t in snpTracks %}
-										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+									{% for group, tracks in snpTracks.items %}
+										<optgroup label="{{ group }}">
+										{% for t in tracks %}
+											<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+										{% endfor %}
+										</optgroup>
 									{% endfor %}
 									</select>
 								</div>
@@ -215,9 +219,11 @@
 			d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); return console.warn(error);}
 				d3.select("#svg-container").selectAll(".track.snps").remove();
+				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
 		        var totalBP = data.meta.rend - data.meta.rstart;
-		        $("#maxScore").val(addSNPTrack(data.meta, data.snps, totalBP));
+				addSNPTrack(data.snps);
+		        $("#maxScore").val(addSNPTrackPoints(data.meta, data.snps, totalBP));
 		        $.isLoading( "hide" );
 			});
 		}
