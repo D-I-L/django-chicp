@@ -13,6 +13,7 @@ from chicpea import chicpea_settings
 from chicpea import utils
 from elastic.search import Search, ElasticQuery
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
+from collections import OrderedDict
 
 
 # Create your views here.
@@ -26,8 +27,8 @@ def chicpea(request):
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
 
-    elasticJSON = Search(idx="chicpea_gene_target").get_mapping(mapping_type="gene_target")
-    tissueList = list(elasticJSON['chicpea_gene_target']['mappings']['gene_target']['_meta']['tissue_type'].keys())
+    elasticJSON = Search(idx=getattr(chicpea_settings, 'TARGET_IDX')).get_mapping(mapping_type="gene_target")
+    tissueList = list(elasticJSON[getattr(chicpea_settings, 'TARGET_IDX')]['mappings']['gene_target']['_meta']['tissue_type'].keys())
     utils.tissues = tissueList
     tissues = list()
     tissueList.sort()
@@ -35,14 +36,24 @@ def chicpea(request):
         tissues.append({"value": t, "text": t.replace("_", " ")})
     context['allTissues'] = tissues
 
-    snp_tracks = list()
-    for track in getattr(chicpea_settings, 'CHICP_IDX'):
-        snp_tracks.append({"value": track, "text":  getattr(chicpea_settings, 'CHICP_IDX').get(track).get('NAME')})
-    context['snpTracks'] = snp_tracks
+    snpTracks = OrderedDict()
+    defaultTrack = ''
+    for group in getattr(chicpea_settings, 'CHICP_IDX'):
+        snp_tracks = list()
+        for track in getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS'):
+            snp_tracks.append({"value": track,
+                               "text":  getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS')
+                               .get(track).get('NAME')})
+            if defaultTrack == '':
+                defaultTrack = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS').get(track).get('NAME')
+        snpTracks[getattr(chicpea_settings, 'CHICP_IDX').get(group).get('NAME')] = snp_tracks
+    context['snpTracks'] = snpTracks
+
     if queryDict.get("snp_track"):
         context['snp_track'] = queryDict.get("snp_track")
     else:
-        context['snp_track'] = snp_tracks[0].get('value')
+        context['snp_track'] = defaultTrack
+        # context['snp_track'] = snp_tracks[0].get('value')
 
     return render(request, 'chicpea/index.html', context, content_type='text/html')
 
@@ -58,6 +69,23 @@ def chicpeaSearch(request, url):
         region = queryDict.get("region")
         mo = re.match(r"(.*):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
+
+        query_bool = BoolQuery()
+        query_bool.must([Query.term("baitChr", chrom),
+                         Query.term("oeChr", chrom),
+                         RangeQuery("dist", gte=-2e6, lte=2e6)])
+        query_bool = _add_tissue_filter(query_bool)
+
+        filter_bool = BoolQuery()
+        filter_bool.should([BoolQuery(must_arr=[RangeQuery("baitStart", gte=segmin, lte=segmax),
+                                                RangeQuery("baitEnd", gte=segmin, lte=segmax)]),
+                            BoolQuery(must_arr=[RangeQuery("oeStart", gte=segmin, lte=segmax),
+                                                RangeQuery("oeEnd", gte=segmin, lte=segmax)])])
+
+        query = ElasticQuery.filtered_bool(query_bool, filter_bool,
+                                           sources=utils.hicFields + utils.tissues)
+        (hic) = _build_hic_query(query)
+
         if utils.sampleLookup.get(tissue):
             dataDir = os.path.join(settings.STATIC_ROOT, "chicpea/data/")
             for s in utils.sampleLookup.get(tissue):
@@ -76,13 +104,21 @@ def chicpeaSearch(request, url):
     elif queryDict.get("searchTerm"):
         if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
             snp = queryDict.get("searchTerm").lower()
+            print("### "+snp)
 
-            query = ElasticQuery.query_match("id", snp)
-            elastic = Search(query, idx='dbsnp138')
+            query = ElasticQuery.query_match("name", snp)
+            mo = re.match(r"(.*)-(.*)", queryDict.get("snp_track"))
+            (group) = mo.group(1)
+            snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
+            snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
+                .get(queryDict.get("snp_track")).get('TYPE')
+
+            elastic = Search(query, idx=snp_track_idx+'/'+snp_track_type)
+            # elastic = Search(query, idx='dbsnp138')
             snpResult = elastic.get_result()
             if (len(snpResult['data']) > 0):
-                chrom = snpResult['data'][0]['seqid']
-                position = snpResult['data'][0]['start']
+                chrom = snpResult['data'][0]['seqid'].replace('chr', "")
+                position = snpResult['data'][0]['end']
 
                 addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': snp})
 
@@ -140,18 +176,22 @@ def chicpeaSearch(request, url):
     genes.sort(key=operator.itemgetter('length'))
 
     # get SNPs based on this segment
-    snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(queryDict.get("snp_track")).get('INDEX')
-
+    mo = re.match(r"(.*)-(.*)", queryDict.get("snp_track"))
+    (group) = mo.group(1)
+    snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
+    snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
+        .get(queryDict.get("snp_track")).get('TYPE')
     query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                   Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                   utils.snpFields)
-    snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx)
+    snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx+'/'+snp_track_type)
 
     snpResult = snpQuery.get_result()
     snps = snpResult['data']
     snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
 
+    # print(snps)
     retJSON = {"hic": hic,
                "meta": {"ostart": int(segmin),
                         "oend": int(segmax),
@@ -242,7 +282,7 @@ def _build_hic_query(query):
     segmin = 0
     segmax = 0
 
-    hicElastic = Search(query, idx='chicpea_gene_target', search_from=0, size=2000)
+    hicElastic = Search(query, idx=getattr(chicpea_settings, 'TARGET_IDX'), search_from=0, size=2000)
     hicResult = hicElastic.get_result()
     if len(hicResult['data']) > 0:
         hic = hicResult['data']
