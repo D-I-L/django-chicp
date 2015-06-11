@@ -1,3 +1,6 @@
+from collections import OrderedDict
+import json
+import logging
 import operator
 import os
 import re
@@ -6,14 +9,19 @@ from svgutils.transform import fromstring
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
+from django.core.management import call_command
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
 
 from chicpea import chicpea_settings
 from chicpea import utils
-from elastic.search import Search, ElasticQuery
+from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
-from collections import OrderedDict
+from elastic.search import Search, ElasticQuery
+
+
+# Get an instance of a logger
+logger = logging.getLogger(__name__)
 
 
 # Create your views here.
@@ -53,9 +61,41 @@ def chicpea(request):
         context['snp_track'] = queryDict.get("snp_track")
     else:
         context['snp_track'] = defaultTrack
-        # context['snp_track'] = snp_tracks[0].get('value')
 
     return render(request, 'chicpea/index.html', context, content_type='text/html')
+
+
+def chicpeaFileUpload(request, url):
+    filesDict = request.FILES
+    files = filesDict.getlist("files[]")
+    snpTracks = list()
+    idx = getattr(chicpea_settings, 'CHICP_IDX').get('userdata').get('INDEX')
+
+    for f in files:
+        line = f.readlines()[0].decode()
+        if line.startswith("#"):
+            line = f.readlines()[1].decode()
+
+        parts = re.split("\t", line)
+        if len(parts) != 5:
+            logger.warn("WARNING: unexpected number of columns: "+line)
+            continue
+
+        f.seek(0)
+        bedFile = NamedTemporaryFile(delete=False)
+        bedFile.write(f.read())
+        bedFile.close()
+        idx_type = os.path.basename(bedFile.name)
+        snpTracks.append({"value": idx_type, "text":  f.name})
+        os.system("curl -XDELETE '"+ElasticSettings.url()+"/cp:hg19_userdata_bed/"+idx_type+"'")
+        call_command("index_search", indexName=idx, indexType=idx_type, indexBED=bedFile.name)
+        logger.debug("--indexName "+idx+" --indexType "+idx_type+" --indexBED "+bedFile.name)
+        bedFile.delete
+
+    context = dict()
+    context['userSNPTracks'] = snpTracks
+    return HttpResponse(json.dumps(context), content_type="application/json")
+    # return render(request, 'chicpea/index.html', context, content_type='text/html')
 
 
 def chicpeaSearch(request, url):
@@ -108,10 +148,14 @@ def chicpeaSearch(request, url):
 
             query = ElasticQuery.query_match("name", snp)
             mo = re.match(r"(.*)-(.*)", queryDict.get("snp_track"))
-            (group) = mo.group(1)
+            (group, track) = mo.group(1, 2)
             snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
-            snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
-                .get(queryDict.get("snp_track")).get('TYPE')
+            snp_track_type = ''
+            if getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS').get(queryDict.get("snp_track")):
+                snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
+                    .get(queryDict.get("snp_track")).get('TYPE')
+            else:
+                snp_track_type = track
 
             elastic = Search(query, idx=snp_track_idx+'/'+snp_track_type)
             # elastic = Search(query, idx='dbsnp138')
@@ -177,10 +221,15 @@ def chicpeaSearch(request, url):
 
     # get SNPs based on this segment
     mo = re.match(r"(.*)-(.*)", queryDict.get("snp_track"))
-    (group) = mo.group(1)
+    (group, track) = mo.group(1, 2)
     snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
-    snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
-        .get(queryDict.get("snp_track")).get('TYPE')
+    snp_track_type = ''
+    if getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS').get(queryDict.get("snp_track")):
+        snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
+            .get(queryDict.get("snp_track")).get('TYPE')
+    else:
+        snp_track_type = track
+
     query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                   Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                   utils.snpFields)
