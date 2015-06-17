@@ -7,14 +7,7 @@ import re
 hicFields = ['baitEnd', 'baitStart', 'oeStart', 'oeEnd', 'oeID', 'baitID', 'baitChr']
 geneFields = ['start', 'end', 'strand', 'attr.gene_name', 'attr.gene_biotype', 'attr.gene_id']
 snpFields = ['start', 'end', 'score', 'name']
-tissues = []
-sampleLookup = {'Naive_CD4': ['C002Q1H1', 'C002TWH1', 'S007G7H4', 'S007DDH2'],
-                'Megakaryocytes': ['S004BTH2'],
-                'Erythroblasts': ['S002R5H1', 'S002S3H1'],
-                'Monocytes': ['C000S5H2', 'C004SQH1'],
-                'Macrophages_M0': ['S00390H1'],
-                'Macrophages_M1': ['S001MJH1', 'S001S7H2', 'S0022IH2'],
-                'Macrophages_M2': ['S00622H1', 'S006VIH1', 'S00BS4H1', 'S00FTNH1']}
+tissues = dict()
 
 
 def prepareTargetQueryJson(geneName, tissues, flist, maxDist=4e6):

@@ -22,6 +22,10 @@ function getQueryVariable(variable) {
 	}
 }
 
+function hasClass(element, cls) {
+    return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
+}
+
 function overlaps(s1, e1, s2, e2) {
     if (s1 < s2 & e1 < e2 & e1 > s2) {
         return 1;
@@ -169,10 +173,25 @@ function log10(val) {
 
 
 function renderHic(term, tissue, diameter, breadcrumb) {
-	resetPage(term, tissue, breadcrumb)
 	var gwas = $("#gwas").val();
+	var region = $("#regionSearch").val();
+	var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
 	
-	d3.json("/chicpea/search?searchTerm=" + term + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, json) {
+	if (term.match(/__/g)){
+		parts = term.split(/__/g);
+		term = parts[0]
+		region = parts[1];
+		$("#regionSearch").val(region);
+	}	
+	
+	resetPage(term, tissue, breadcrumb)
+	
+	url = "/chicpea/search?searchTerm=" + term + '&tissue=' + tissue+'&targetIdx='+targetIdx;
+	if (gwas != "" && $.cookie('cb-enabled') == 'accepted') url += '&snp_track=' + gwas;
+	if (region != "") url += '&region='+region;
+	$("#regionSearch").val("");
+	
+	d3.json(url, function (error, json) {
 		if (error) return console.warn(error);
 		if (json.error) {
 				$("div.radio.tissue").each(function (index, value){
@@ -231,7 +250,17 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		}
 		bt['hilight'] = 1;
 		
-		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter);
+		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter)
+		.on("mouseup", function(d) {
+				if (selecting){
+					selecting = 0;
+					var innerRadius = diameter * 0.4,
+						outerRadius = innerRadius + 1,
+						circum = 2 * innerRadius * pi,
+						circAvail = circum - ((2 * angleOffset) * (pi/180) * innerRadius);
+					zoomIn(innerRadius, circAvail, angleOffset);
+				}
+		});
 		
 		vis.append("text")
 			.attr("x", 0).attr("y", 0)
@@ -303,18 +332,33 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		startAngle = ((arcAvail + angleOffset) * pi) / 180;
 			
 		var arc = d3.svg.arc()
-			.innerRadius((diameter * 0.4) - 60).outerRadius(diameter * 0.4)
+			.innerRadius(diameter * 0.29).outerRadius(diameter * 0.4)
 			.startAngle(-endAngle).endAngle(endAngle);
 	
-		vis.append("path").attr("d", arc).attr("id", "originWedge")
+		var wedge = vis.append("path").attr("d", arc).attr("id", "originWedge")
 			.attr("fill", "lightgrey")
 			.attr("transform", trans)
-			.on("mouseout", function (d) {
+/*			.on("mouseout", function (d) {
 					if (selecting){
 						selecting = 0;
 						zoomIn(innerRadius, circAvail, angleOffset);
 					}
-			});;
+			})*/
+			.on("click", function(d){
+					id = $("#breadcrumb").children().last().attr('id')
+					if (id.match(/__/g)){
+						parts = term.split(/__/g);
+						term = parts[0]
+						region = parts[1];
+						$("#regionSearch").val("");
+						var tissue = $("input:radio[name=tissue]:checked").val();
+						renderHic(term, tissue, diameter, 1);
+					}
+			});
+			
+		if ($("#breadcrumb").children().last().attr('id').match(/__/g)){
+			wedge.style('cursor', 'zoom-out');
+		}
 			
 				
 		var text = vis.append("text")
@@ -382,12 +426,12 @@ function addCenterScale(){
 		
 	
 	scale_group.append("path").attr("d", arc2).attr("id", "arcBackground").style("fill", "white").style("opacity", 0)
-			.on("mouseout", function (d) {
+/*			.on("mouseout", function (d) {
 					if (selecting){
 						selecting = 0;
 						zoomIn(innerRadius, circAvail, angleOffset);
 					}
-			});
+			})*/;
 	
 	//var colors = d3.scale.linear().domain([angleOffset, arcAvail]).range(["pink", "purple"]);
 	var segmentData = [];
@@ -397,14 +441,28 @@ function addCenterScale(){
 	var segments = scale_group.append("g").selectAll("svg").data(segmentData).enter();
 	segments.append("path")
 		.attr("d", d3.svg.arc()
-			.innerRadius(diameter * 0.28)
+			//.innerRadius(diameter * 0.28)
+			.innerRadius(0)
 			.outerRadius(outerRadius+40)
 			.startAngle(function(d){ return d*pi/180; })
 			.endAngle(function(d){ return (d+angleOffset)*pi/180; }))
 		.style("fill", "white").style("opacity", 0)
 		.attr("class", "segment")
 		.attr("id", function (d) { return "seg"+d; })
-		.on("click", function (d) {
+		.on("mousedown", function(d) {
+				d3.event.preventDefault();
+				d3.selectAll(".segment").classed("selected", false).style("fill", "white").style("opacity", 0);
+				d3.select(this).style("opacity", 0.2).style("fill",  "yellow");
+				d3.select(this).classed('selected', true);
+				selecting = d;
+		})
+		.on("mouseup", function(d) {
+				if (selecting){
+					selecting = 0;
+					zoomIn(innerRadius, circAvail, angleOffset);
+				}
+		})
+/*		.on("click", function (d) {
 				if (selecting){
 					selecting = 0;
 					zoomIn(innerRadius, circAvail, angleOffset);
@@ -412,13 +470,10 @@ function addCenterScale(){
 				else{
 					d3.selectAll(".segment").classed("selected", false).style("fill", "white").style("opacity", 0);
 					d3.select(this).style("opacity", 0.2).style("fill",  "yellow");
-					//d3.select(this).style("opacity", 0.3).style("fill", colors(d));
 					d3.select(this).classed('selected', true);
-					//console.log(d);
-					//console.log(d3.select(this).attr("id"));
 					selecting = d;
 				}
-		})				
+		})	*/			
 		.on("mouseover", function(d){ 
 				if (selecting > 0){
 					if (selecting != d && selecting != d+angleOffset && selecting != d-angleOffset){
@@ -488,7 +543,7 @@ function addExtraData(extras){
 		.attr("stroke", "red")
 		.attr("stroke-width", "100")
 		.on("mouseover", function (d) {
-			div.transition().duration(200).style("opacity", 0.9);
+			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 			div.html(d.name).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY) + "px");
 			d3.select(this).style("opacity", 0.3);
 		})
@@ -544,7 +599,7 @@ function addGeneTrack(meta, genes, totalBP){
 				return false;
 		})
 		.on("mouseover", function (d, i) {
-			div.transition().duration(200).style("opacity", 0.9);
+			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 			div.html(d.gene_name + "</br>" + d.gene_biotype + "</br>" + d.gene_id + "</br>" + numberWithCommas(parseInt(d.start) + start) + "</br>" + numberWithCommas(parseInt(d.end) + start))
 				.style("left", (d3.event.pageX) + "px")
 				.style("top", (d3.event.pageY - 28) + "px");
@@ -592,11 +647,13 @@ function addSNPTrack(snps){
 		.data([1]).enter();
 	
 	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.3).attr("transform", trans);
-	snpBackground.append("path")
-	.attr("d", d3.svg.arc()
-		.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
-		.startAngle(startAngle).endAngle(endAngle)
-	).style("fill", "white").attr("transform", trans);
+	if (maxscore >= 7.03){
+		snpBackground.append("path")
+		.attr("d", d3.svg.arc()
+			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
+			.startAngle(startAngle).endAngle(endAngle)
+		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
+	}
 }
 
 function addSNPTrackPoints(meta, snps, totalBP){
@@ -616,7 +673,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 	
 	var symb = d3.svg.symbol();
 	symb.size(15);
-	vis.append("g").attr("class", "track snps").selectAll("svg")
+	vis.append("g").attr("class", "track snps cookie_hide").selectAll("svg")
 		.data(snps.filter(function (d) {
 				return parseFloat(d.score) >= thresh;
 		}))
@@ -637,22 +694,20 @@ function addSNPTrackPoints(meta, snps, totalBP){
 				return "darkgrey";
 		})
 		.on("mouseover", function (d, i) {
-				div.transition()
-				.duration(200)
-				.style("opacity", 0.9);
+				div.transition().duration(200).style("opacity", 0.9);
 				div.html(d.name + "</br>P Value (-log10) = " + parseFloat(d.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(meta.rstart)) + "</br>")
+				.attr("class", "tooltip")
 				.style("left", (d3.event.pageX) + "px")
 				.style("top", (d3.event.pageY - 28) + "px");
 				                                                     
 				d3.select(this).style("opacity", 0.3);
 		})
 		.on("mouseout", function (d) {
-				div.transition()
-				.duration(500)
-				.style("opacity", 0);
+				div.transition().duration(500).style("opacity", 0);
 				d3.select(this).style("opacity", 1);
 		})                                                          
 		.on("click", function (d) {
+				div.transition().duration(0).style("opacity", 0);
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
             	d3.selectAll("svg").remove();
@@ -686,7 +741,6 @@ function addInteractions(meta, hics, totalBP, tissues) {
 				}
 				return classes;
 		})
-		//.attr("display", "none")
 		.attr("d", function (d) {
 				return computePath(d.baitStart + ((d.baitEnd - d.baitStart) / 2), d.oeStart + ((d.oeEnd - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
 		})
@@ -722,7 +776,7 @@ function pathDetails(interactions){
 			}
 	})
 	.on("mouseover", function (d, i) {
-			div.transition().duration(200).style("opacity", 0.9);
+			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 			div.html("Score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
 			
 			vis.selectAll("path.interaction").sort(function (a, b) {
@@ -735,8 +789,16 @@ function pathDetails(interactions){
 			if (d3.select(".updateClick").node() != null){
 				this.parentNode.appendChild(d3.select(".updateClick").node());
 			}
+			
 			d3.select(this).classed('hover', true);
-			this.parentNode.appendChild(this);
+			//this.parentNode.appendChild(this);
+			
+//			if (this.getAttribute("stroke") != "yellow"){
+//			if(this.classList.contains("hover")){
+//				console.log("here");
+//				this.parentNode.appendChild(this);
+//			}
+			//this.parentNode.appendChild(this);
 			
 			vis.append("path")
 				.attr("class", "deleteMe")
@@ -805,7 +867,8 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
 		
-	d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+	//d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+	d3.json("/chicpea/subSearch?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 			if (error) { $("#panel-" + type).isLoading( "hide" ); return console.warn(error);}
 			
 			//console.log(data);
@@ -861,7 +924,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("transform", "rotate(-90)")
 				.text("P Value (-log10)");
 				
-			var snp = svgContainer.append("g").attr("class", "track snps").attr("id", type+"SNPTrack")
+			var snp = svgContainer.append("g").attr("class", "track snps cookie_hide").attr("id", type+"SNPTrack")
 				.selectAll(".snp")
 				.data(data.snps)
 				.enter().append("g")
@@ -884,9 +947,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					return "translate(" + xRange(d.start + regionStart) + "," + yRangeS(d.score) + ")";
 				})
 				.on("mouseover", function (d, i) {
-						div.transition()
-							.duration(200)
-							.style("opacity", 0.9);
+						div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 						div.html(d.name + "</br>" + d3.round(d.score, 3) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(regionStart)))
 							.style("left", (d3.event.pageX + 10) + "px")
 							.style("top", (d3.event.pageY - 18) + "px");
@@ -1019,9 +1080,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					.attr("stroke", function (d) { return "rgb("+d.color+")"; })
 					.attr("stroke-width", "6px")
 					.on("mouseover", function (d, i) {
-							div.transition()
-								.duration(200)
-								.style("opacity", 0.9);
+							div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 							div.html("<strong>"+d.sample+"</strong><br/>"+d.name)
 								.style("left", (d3.event.pageX + 10) + "px")
 								.style("top", (d3.event.pageY - 18) + "px");
@@ -1043,10 +1102,18 @@ function resetPage(term, tissue, breadcrumb) {
     resetVis();
     $("#search_term").val(term);
     $("#page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
-    if (breadcrumb) $("#breadcrumb").append('<li id="BC-' + term + '"><a href="#" onclick=\'javascript:d3.selectAll("svg").remove(); $("#BC-' + term + '").remove(); renderHic("' + term + '", $("input:radio[name=tissue]:checked").val(), '+diameter+', 1)\'>' + term + '</a></li>');
+    termText = term
+    termId = term
+    if ($("#regionSearch").val() != '' && $("#regionSearch").val() != term){
+    	termText = term+" ("+$("#regionSearch").val()+")";
+    	termId = term+"__"+$("#regionSearch").val();
+    }
+    if (breadcrumb) $("#breadcrumb").append('<li id="BC-' + termId + '"><a href="#" onclick=\'javascript:d3.selectAll("svg").remove(); $(document.getElementById("BC-'+termId+'")).remove();  renderHic("' + termId + '", $("input:radio[name=tissue]:checked").val(), '+diameter+', 1)\'>' + termText + '</a></li>');
 }
 
 function resetVis() {
+	//$(".tooltip").hide();
+	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
 	d3.select("#message").remove();	
 	d3.select("#svg-container").selectAll(".deleteClick").remove();
 	d3.select("#svg-container").selectAll(".updateClick").classed('updateClick', false);
@@ -1068,9 +1135,10 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 		var region = CHR+":"+p1+"-"+p2;
 		var gwas = $("#gwas").val();
 		var tissue = $("input:radio[name=tissue]:checked").val();
-		d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
-				console.log(data);
-		});
+		$("#regionSearch").val(region);
+		var term = $("#search_term").val();
+		renderHic(term, tissue, diameter, 1)
+		$("#regionSearch").val("");
 	}
 }
 	
@@ -1090,6 +1158,13 @@ $(document).ready(function () {
     		
     		resetVis();
     		pathDetails(d3.select("#svg-container").selectAll("path.interaction"));
+    });
+    
+    $(document).keyup(function(e) {
+		if (e.keyCode == 27) { 
+			selecting = 0;
+			d3.selectAll(".segment").classed("selected", false).style("fill", "white").style("opacity", 0);
+		}
     });
 });
 
