@@ -49,16 +49,6 @@ def chicpea(request):
             tissues.append({"value": t, "text": t.replace("_", " "), "class": idx})
     context['allIndexes'] = indexes
     context['allTissues'] = tissues
-    print(tissues)
-
-#    elasticJSON = Search(idx=getattr(chicpea_settings, 'TARGET_IDX')).get_mapping(mapping_type="gene_target")
-#    tissueList = list(elasticJSON[getattr(chicpea_settings, 'TARGET_IDX')]['mappings']['gene_target']['_meta']['tissue_type'].keys())
-#    utils.tissues = tissueList
-#    tissues = list()
-#    tissueList.sort()
-#    for t in tissueList:
-#        tissues.append({"value": t, "text": t.replace("_", " ")})
-#    context['allTissues'] = tissues
 
     snpTracks = OrderedDict()
     defaultTrack = ''
@@ -138,7 +128,7 @@ def chicpeaSearch(request, url):
             searchTerm = queryDict.get("searchTerm").lower()
             searchType = 'snp'
 
-    print("### "+searchType+" - "+searchTerm+' ###')
+    logger.warn("### "+searchType+" - "+searchTerm+' ###')
 
     if searchType == 'region':
         query_bool = BoolQuery()
@@ -227,7 +217,6 @@ def chicpeaSearch(request, url):
 
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
 
-    # print(snps)
     retJSON = {"hic": hic,
                "meta": {"ostart": int(segmin),
                         "oend": int(segmax),
@@ -328,7 +317,6 @@ def chicpeaDownload(request, url):
 def _add_tissue_filter(bool_query, targetIdx):
 
     tissueFilter = list()
-    print(targetIdx)
     for t in utils.tissues[targetIdx]:
         tissueFilter.append(RangeQuery(t, gte=5))
 
