@@ -1125,6 +1125,7 @@ function resetVis() {
 
 function zoomIn(innerRadius, circAvail, angleOffset){
 	selectedArray = d3.selectAll(".selected")[0];
+	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
 	if (selectedArray.length > 0) {
 		s1 = parseInt(selectedArray[0].id.replace("seg", ""))
 		s2 = parseInt(selectedArray[selectedArray.length-1].id.replace("seg", ""))
