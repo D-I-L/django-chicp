@@ -269,6 +269,14 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 			.attr("class", "svg_only")
 			.text($("#page_header").html());
 		
+		vis.append("text")
+			.attr("x", 0).attr("y", 20)
+			.attr("text-anchor", "left")
+			.style("font-size", "14px")
+			.style("font-style", "italic")
+			.attr("class", "svg_only")
+			.text("SNP Data: "+$('#gwas option:selected').text());
+		
 		
 		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
 		
@@ -498,7 +506,7 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	var end = start + totalBP;
 	
 	var divisor = 100000, multiplier = 10;
-	if (totalBP < 1000000) {
+	if (totalBP < 100000) {
 		divisor = divisor/10;
 		multiplier = multiplier*10;
 	}
@@ -861,16 +869,19 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 		formatxAxis = d3.format('0,000,000f'),
 		xRange = d3.scale.linear().domain([d3.min(data1), d3.max(data1)]).range([(3 * margin.left), (w - margin.left)]),
 		regionStart = d3.min(data1),
-		tissue = $("input:radio[name=tissue]:checked").val();
+		tissue = $("input:radio[name=tissue]:checked").val()
+		borderColor = "red";
 		
 	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
     var gwas = $("#gwas").val();
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
 		
-	//d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 	d3.json("/chicpea/subSearch?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 			if (error) { $("#panel-" + type).isLoading( "hide" ); return console.warn(error);}
+			
+			if (type === 'bait') borderColor = 'blue';
+			else if(type === 'target') borderColor = "red";
 			
 			//console.log(data);
 			adjustBump(data.genes, 100);	
@@ -885,8 +896,17 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("x", 0).attr("y", 0)
 				.attr("text-anchor", "left")  
 				.style("font-size", "18px")
+				.style("color", borderColor)
 				.attr("class", "svg_only")
 				.text(type.substring(0,1).toUpperCase() + type.substring(1));
+				
+			var rectangle = svgContainer.append("rect")
+				.attr("x", -10).attr("y", -30)
+				.attr("width", w+10+margin.left+margin.right).attr("height", h+30+margin.top+margin.bottom)
+				.style("stroke", borderColor)
+				.style("fill", "none")
+				.style("stroke-width", 1)
+				.attr("class", "svg_only");
 			
 			//Create the Axis
 			var xAxis = d3.svg.axis()
