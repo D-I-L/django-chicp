@@ -131,7 +131,7 @@
 			}
 			
 			//Displays the cookie bar if arguments met
-			if(options.forceShow || cookieValue=='enabled' || cookieValue==''){
+			if(options.forceShow || cookieValue=='enabled'|| cookieValue=='declined' || cookieValue==''){
 				if(options.append){
 					$(options.element).append('<div id="cookie-bar"'+fixed+zindex+'><p>'+message+acceptButton+declineButton+policyButton+'</p></div>');
 				}else{
