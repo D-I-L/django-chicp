@@ -497,31 +497,32 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	
 	var end = start + totalBP;
 	
+	var divisor = 100000, multiplier = 10;
+	if (totalBP < 1000000) {
+		divisor = divisor/10;
+		multiplier = multiplier*10;
+	}
+	
 	var data = [{'label': null, 'angle': startAngle, 'position': start}];
 
-	var position1 = 1000000 * Math.ceil(start/100000)/10
+	var position1 = 1000000 * Math.ceil(start/divisor)/multiplier
 	var angle1 = (circAvail/totalBP)*(position1-start)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
 	data.push({'label': position1/1000000+"Mb", 'position': position1, 'angle': startAngle+angle1});
-	//data.push({'label': numberWithCommas(position1), 'position': position1, 'angle': startAngle+angle1});
 
-	var position2 = 1000000 * Math.floor(end/100000)/10
+	var position2 = 1000000 * Math.floor(end/divisor)/multiplier
 	var angle2 = (circAvail/totalBP)*(end-position2)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
 
-	var count = Math.ceil((position2-position1)/100000);
+	var count = Math.ceil((position2-position1)/divisor);
 	var section = ((arcAvail * Math.PI)/180 - angle2 - angle1) / count;
 
 	var totalAngle = startAngle+angle1;
-	for (i=position1+100000; i<position2; i+=100000){
-		label = Math.ceil(i/100000)/10
-		//label = numberWithCommas(i);
+	for (i=position1+divisor; i<position2; i+=divisor){
+		label = Math.ceil(i/divisor)/multiplier
 		totalAngle += section
 		data.push({'label': label+"Mb", 'position': i, 'angle': totalAngle});
-		//data.push({'label': label, 'position': i, 'angle': totalAngle});
 	}
 	data.push({'label': position2/1000000+"Mb", 'position': position2, 'angle': endAngle-angle2});
-	//data.push({'label': numberWithCommas(position2), 'position': position2, 'angle': endAngle-angle2});
 	data.push({'label': null, 'angle': endAngle, 'position': end});
-	//console.log(data);
 	
 	return data;
 }
