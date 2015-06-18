@@ -9,7 +9,7 @@
 <meta name="author" content="">
 <link rel="icon" href="/static/favicon.ico">
 
-<title>Chicpea</title>
+<title>Capture HiC Plotter</title>
 
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet"
@@ -17,10 +17,17 @@
 <link rel="stylesheet"
 	href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 
+<link href="{% static "chicpea/css/bootstrap.fd.css" %}" rel="stylesheet">
+<link href="{% static "chicpea/css/jquery.cookiebar.css" %}" rel="stylesheet">
+
 <!-- Custom styles for this template -->
 <link href="{% static "chicpea/css/extra.css" %}" rel="stylesheet">
 
-<link href="{% static "chicpea/css/bootstrap.fd.css" %}" rel="stylesheet">
+<style>
+<!--
+.cookie_hide { display:none; }
+-->
+</style>
 
 <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
 <!--[if lt IE 9]>
@@ -43,16 +50,17 @@
 						class="icon-bar"></span> <span class="icon-bar"></span> <span
 						class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/chicpea/">CHICPea</a>
+				<a class="navbar-brand" href="/chicpea/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
 			</div>
 		</div>
 	</nav>
 
 	<div class="container-fluid">
 		<div class="row">
-			<div class="col-sm-3 col-md-2 sidebar">
+			<div class="col-sm-3 col-md-2 sidebar no-print">
 				<ul class="nav nav-sidebar">
 					<form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">
+						<input type="hidden" id="regionSearch" value="{{ region }}">
 						<div class="form-group">
 							<input type="text" class="form-control" placeholder="Search Term"
 								id="search_term" value="{{ searchTerm }}">
@@ -61,18 +69,25 @@
 						<div class="panel panel-default" style="margin-top: 20px">
 							<div class="panel-heading">Tissue Types</div>
 							<div class="panel-body">
-								<div class="form-group">
+								<div class="form-group" style="width:100%">
+									<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
+							{% for idx in allIndexes %}
+										<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
+							{% endfor %}
+									</select>
+								</div>
+								<div class="form-group" style="padding-top:10px;">
 						{% for t in allTissues %}
-									<div class="radio tissue" style="display: block">
+									<div class="radio tissue {{ t.class }}" style="display: none">
 										<label><input type="radio" name="tissue" value="{{ t.value }}"
-										{% if t.value ==  tissue %}checked="checked"{% endif %}
+										{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
 										>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
 									</div>
 						{% endfor %}
 								</div>
 							</div>
 						</div>
-						<div class="panel panel-default" style="margin-top: 20px">
+						<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
 							<div class="panel-heading">Association Statistics</div>
 							<div class="panel-body">
 								<div class="form-group">
@@ -95,7 +110,7 @@
 					</form>
 					<form class="navbar-form navbar-left hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
 						{% csrf_token %}
-						<div class="panel panel-default">
+						<div class="panel panel-default cookie_hide">
 							<div class="panel-heading">Upload Your Own Data</div>
 							<div class="panel-body">
 								<p style="font-size:0.8em">Files to be uploaded will replace the SNP scatter plot track and appear as user data in the Association Statistics list above.<br />
@@ -110,7 +125,7 @@
 			</div>
 
 			<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-				<span style="float: right">
+				<span style="float: right" class="no-print">
 					<button class="btn btn-primary" id="save_as_svg" value="">
 						<i class="fa fa-floppy-o"></i>&nbsp;SVG
 					</button>
@@ -122,7 +137,7 @@
 					</button> -->
 				</span>
 				<h1 class="page-header" id="page_header"></h1>
-				<ol class="breadcrumb" id="breadcrumb">
+				<ol class="breadcrumb no-print" id="breadcrumb">
 					<li><a href="/chicpea/">Start</a></li>
 				</ol>
 				<div class="row">
@@ -178,17 +193,18 @@
 	<!-- Bootstrap core JavaScript
 		================================================== -->
 	<!-- Placed at the end of the document so the pages load faster -->
-	<script
-		src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/bootstrap.fd.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookie.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookiebar.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
 	<script type="text/javascript">
 		function styles() {
 			var used = "";
 			var sheets = document.styleSheets;
 			for (var i = 0; i < sheets.length; i++) {
-				if (sheets[i].href.match(window.location.hostname)){
+				if (sheets[i].href == null || sheets[i].href.match(window.location.hostname)){
 					var rules = sheets[i].cssRules;
 					for (var j = 0; j < rules.length; j++) {
 						var rule = rules[j];
@@ -231,10 +247,12 @@
 		}
 		function switch_snp_track(selectObj) {
 			var region = $("#region").val();
+			var term = $("#search_term").val();
 			var tissue = $("input:radio[name=tissue]:checked").val();
 			var gwas = selectObj.options[selectObj.selectedIndex].value;
+			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
 			$.isLoading({ text: "Loading" });
-			d3.json("/chicpea/search?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); return console.warn(error);}
 				d3.select("#svg-container").selectAll(".track.snps").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
@@ -245,15 +263,51 @@
 		        $.isLoading( "hide" );
 			});
 		}
+		function switch_targets (selectObj) {
+			var target = selectObj.options[selectObj.selectedIndex].value;
+			$(".tissue").hide();
+			$(document.getElementsByClassName(target)).css('display', 'block');
+			$(".tissue").find("input:radio").each(function () { $(this).prop('checked', false); });
+			$(document.getElementsByClassName(target)).first().find("input:radio").prop('checked',true);
+			
+			var region = $("#region").val();
+			var term = $("#search_term").val();
+			var tissue = $("input:radio[name=tissue]:checked").val();
+			var gwas = $("#gwas").val();
+			
+			$.isLoading({ text: "Loading" });
+			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+				if (error) {$.isLoading( "hide" ); return console.warn(error);}
+				d3.select("#svg-container").selectAll(".middle.hic").remove();
+				d3.select("#svg-container").selectAll(".deleteSearch").remove();
+	    		resetVis();
+		        var totalBP = data.meta.rend - data.meta.rstart;
+		        var hics = data.hic;
+				if (hics.length == 0) {
+					div = d3.select("#svg-container")
+						.append("div")
+						.html("<h1>No interactions found</h1>")
+						.attr("id", "message")
+						.style("width", "100%")
+						.style("text-align", "center")
+						.style("padding-top", "200px");
+					return;
+				}
+				for (var i = 0; i < hics.length; i++) {
+				    hics[i].id = i + 1;
+				}
+				var tissues = [];
+				for (var i=0;i<data.meta.tissues.length;i++) {
+					tissues[data.meta.tissues[i]] = 0;
+				}
+		        addInteractions(data.meta, hics, totalBP, tissues);
+				for(var t in tissues) {
+					$("#"+t+"_count").text("("+tissues[t]+")");
+				}
+		        $.isLoading( "hide" );
+			});
+		}
 		$(document).ready(function() {
-			
-    		optGroup = $("#userData");
-    		optGroup.empty();
-    		for (var i = 0; i < localStorage.length; i++){
-    			optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
-    		}
-			
-			
 			
 			$("#save_as_svg").click(function() {
 				submit_download_form("svg");
@@ -301,8 +355,55 @@
 	            	console.log("Cancelled!")
 	            });
 			});
+			
+			selectObj = $("#target")[0]
+			var target = selectObj.options[selectObj.selectedIndex].value;
+			$(".tissue").hide();
+			$(document.getElementsByClassName(target)).css('display', 'block');
+			$(".tissue").find("input:radio").each( function () {
+				if ($(this).val() == "{{ default_tissue }}")
+					$(this).prop('checked', true);
+				else
+					$(this).prop('checked', false);
+				});
 
+			$.cookieBar({
+				message: 'Some data on this website are only available after acceptance of our <a style="padding:0px; margin:0px;" href="https://www.immunobase.org/page/Copyright" title="read our data access agreement" target="_blank">data access agreement</a> and cookies.',
+				fixed: true,
+				bottom: true,
+				acceptButton: true,
+				acceptText: 'Accept',
+				declineButton: true,
+				declineText: 'Decline',
+				autoEnable: false,
+				acceptFunction: function(cookieValue){ switch_snp_track($("#gwas")[0]); showCookieProtected(); },
+				zindex: 100,
+			});
+
+			if ($.cookie('cb-enabled') == 'enabled' || $.cookie('cb-enabled') == 'accepted'){
+				showCookieProtected();
+			
+	    		optGroup = $("#userData");
+	    		optGroup.empty();
+	    		for (var i = 0; i < localStorage.length; i++){
+	    			optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
+	    		}
+			}
+			
+			function showCookieProtected(){
+				var styleSheetList = document.styleSheets;
+				var styleSheet = styleSheetList[styleSheetList.length-1]
+				if (!styleSheet) return;
+				var theRules = new Array();
+				if (styleSheet.cssRules)
+					theRules = styleSheet.cssRules
+				else if (styleSheet.rules)
+					theRules = styleSheet.rules
+				else return;
+				theRules[0].style.display = '';
+			}
 		});
 	</script>
+		
 </body>
 </html>
