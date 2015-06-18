@@ -36,6 +36,9 @@ def chicpea(request):
         context['searchTerm'] = queryDict.get("term")
     if queryDict.get("tissue"):
         context['tissue'] = queryDict.get("tissue")
+    else:
+        context['default_target'] = getattr(chicpea_settings, 'DEFAULT_TARGET')
+        context['default_tissue'] = getattr(chicpea_settings, 'DEFAULT_TISSUE')
 
     indexes = list()
     tissues = list()
@@ -51,7 +54,7 @@ def chicpea(request):
     context['allTissues'] = tissues
 
     snpTracks = OrderedDict()
-    defaultTrack = ''
+    defaultTrack = getattr(chicpea_settings, 'DEFAULT_TRACK')
     for group in getattr(chicpea_settings, 'CHICP_IDX'):
         snp_tracks = list()
         for track in getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS'):
@@ -106,7 +109,6 @@ def chicpeaFileUpload(request, url):
 
 def chicpeaSearch(request, url):
     queryDict = request.GET
-    tissue = queryDict.get("tissue")
     targetIdx = queryDict.get("targetIdx")
     blueprint = {}
     hic = []
@@ -123,16 +125,19 @@ def chicpeaSearch(request, url):
             searchTerm = ""
         mo = re.match(r"(.*):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
-    elif queryDict.get("searchTerm"):
-        if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
-            searchTerm = queryDict.get("searchTerm").lower()
+    if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
+        searchTerm = queryDict.get("searchTerm").lower()
+        addList.append(_find_snp_position(queryDict.get("snp_track"), searchTerm))
+        position = addList[0]['end']
+        if searchType != 'region':
             searchType = 'snp'
 
     logger.warn("### "+searchType+" - "+searchTerm+' ###')
 
     if searchType == 'region':
         query_bool = BoolQuery()
-        if searchTerm:
+        filter_bool = BoolQuery()
+        if searchTerm and len(addList) == 0:
             query_bool.must([Query.query_string(searchTerm, fields=["name", "ensg"]),
                              Query.term("baitChr", chrom),
                              Query.term("oeChr", chrom),
@@ -144,34 +149,23 @@ def chicpeaSearch(request, url):
 
         query_bool = _add_tissue_filter(query_bool, targetIdx)
 
-        filter_bool = BoolQuery()
-        filter_bool.should([BoolQuery(must_arr=[RangeQuery("baitStart", gte=segmin, lte=segmax),
-                                                RangeQuery("baitEnd", gte=segmin, lte=segmax)]),
-                            BoolQuery(must_arr=[RangeQuery("oeStart", gte=segmin, lte=segmax),
-                                                RangeQuery("oeEnd", gte=segmin, lte=segmax)])])
+        if len(addList) > 0:
+            filter_bool.should([BoolQuery(must_arr=[RangeQuery("baitStart", lte=position),
+                                                    RangeQuery("baitEnd", gte=position)]),
+                                BoolQuery(must_arr=[RangeQuery("oeStart", lte=position),
+                                                    RangeQuery("oeEnd", gte=position)])])
+        else:
+            filter_bool.should([BoolQuery(must_arr=[RangeQuery("baitStart", gte=segmin, lte=segmax),
+                                                    RangeQuery("baitEnd", gte=segmin, lte=segmax)]),
+                                BoolQuery(must_arr=[RangeQuery("oeStart", gte=segmin, lte=segmax),
+                                                    RangeQuery("oeEnd", gte=segmin, lte=segmax)])])
 
         query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
 
     elif searchType == 'snp':
-        query = ElasticQuery.query_match("name", searchTerm)
-        mo = re.match(r"(.*)-(.*)", queryDict.get("snp_track"))
-        (group, track) = mo.group(1, 2)
-        snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
-        snp_track_type = ''
-        if getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS').get(queryDict.get("snp_track")):
-            snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
-                .get(queryDict.get("snp_track")).get('TYPE')
-        else:
-            snp_track_type = track
-
-        elastic = Search(query, idx=snp_track_idx+'/'+snp_track_type)
-        snpResult = elastic.get_result()
-        if (len(snpResult['data']) > 0):
-            chrom = snpResult['data'][0]['seqid'].replace('chr', "")
-            position = snpResult['data'][0]['end']
-
-            addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': searchTerm})
+        if len(addList) > 0:
+            chrom = addList[0]['chr']
 
             query_bool = BoolQuery()
             query_bool.must([Query.term("baitChr", chrom),
@@ -185,7 +179,8 @@ def chicpeaSearch(request, url):
                                 BoolQuery(must_arr=[RangeQuery("oeStart", lte=position),
                                                     RangeQuery("oeEnd", gte=position)])])
 
-            query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
+            query = ElasticQuery.filtered_bool(query_bool, filter_bool,
+                                               sources=utils.hicFields + utils.tissues[targetIdx])
             hic, segmin, segmax = _build_hic_query(query, targetIdx)
 
             if len(hic) == 0:
@@ -264,11 +259,7 @@ def chicpeaDownload(request, url):
     SVG = queryDict.get("data-main")
     CSS = queryDict.get("css-styles")
     tissue = queryDict.get("tissue").replace(' ', '_')
-    returnFileName = 'CHICPEA-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
-
-    # f1 = fromstring(SVG)
-    # f1.set_size([750, 750])
-    # print(f1.get_size())
+    returnFileName = 'CHiCP-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
 
     if queryDict.get("data-bait") and queryDict.get("data-target"):
         s1 = queryDict.get("data-bait")
@@ -285,8 +276,9 @@ def chicpeaDownload(request, url):
         layout.add_figure(fromstring(svgPanels))
         layout._generate_layout()
         SVG = layout.to_str().decode()
+        SVG = SVG.replace('translate(0, 270)', 'translate(0, 350)')
 
-    SVG = SVG.replace('<svg ', '<svg style="padding:40px;" ')
+    SVG = SVG.replace('<svg ', '<svg style="padding:40px;width:1500px;height:750px;" ')
     SVG = SVG.replace("</svg>",
                       '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
@@ -354,6 +346,28 @@ def _build_gene_query(chrom, segmin, segmax):
         o.update({"length": (o['end']-o['start'])})
     genes.sort(key=operator.itemgetter('length'))
     return genes
+
+
+def _find_snp_position(snp_track, name):
+    mo = re.match(r"(.*)-(.*)", snp_track)
+    (group, track) = mo.group(1, 2)
+    snp_track_idx = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('INDEX')
+    snp_track_type = ''
+    if getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS').get(snp_track):
+        snp_track_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('TRACKS') \
+            .get(snp_track).get('TYPE')
+    else:
+        snp_track_type = track
+
+    query = ElasticQuery.query_match("name", name)
+    elastic = Search(query, idx=snp_track_idx+'/'+snp_track_type)
+    snpResult = elastic.get_result()
+    if (len(snpResult['data']) > 0):
+        chrom = snpResult['data'][0]['seqid'].replace('chr', "")
+        position = snpResult['data'][0]['end']
+
+        # addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': searchTerm})
+    return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
 
 
 def _build_snp_query(snp_track, chrom, segmin, segmax):
