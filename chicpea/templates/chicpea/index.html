@@ -9,7 +9,7 @@
 <meta name="author" content="">
 <link rel="icon" href="/static/favicon.ico">
 
-<title>Chicpea</title>
+<title>Capture HiC Plotter</title>
 
 <!-- Latest compiled and minified CSS -->
 <link rel="stylesheet"
@@ -50,7 +50,7 @@
 						class="icon-bar"></span> <span class="icon-bar"></span> <span
 						class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/chicpea/">CHICPea</a>
+				<a class="navbar-brand" href="/chicpea/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
 			</div>
 		</div>
 	</nav>
@@ -72,7 +72,7 @@
 								<div class="form-group" style="width:100%">
 									<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
 							{% for idx in allIndexes %}
-										<option value="{{ idx.value }}">{{ idx.text }}</option>
+										<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
 							{% endfor %}
 									</select>
 								</div>
@@ -80,7 +80,7 @@
 						{% for t in allTissues %}
 									<div class="radio tissue {{ t.class }}" style="display: none">
 										<label><input type="radio" name="tissue" value="{{ t.value }}"
-										{% if t.value ==  tissue %}checked="checked"{% endif %}
+										{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
 										>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
 									</div>
 						{% endfor %}
@@ -204,7 +204,7 @@
 			var used = "";
 			var sheets = document.styleSheets;
 			for (var i = 0; i < sheets.length; i++) {
-				if (sheets[i].href.match(window.location.hostname)){
+				if (sheets[i].href == null || sheets[i].href.match(window.location.hostname)){
 					var rules = sheets[i].cssRules;
 					for (var j = 0; j < rules.length; j++) {
 						var rule = rules[j];
@@ -266,7 +266,6 @@
 		function switch_targets (selectObj) {
 			var target = selectObj.options[selectObj.selectedIndex].value;
 			$(".tissue").hide();
-			//$("."+target.replace(':', '_')).css('display', 'block');
 			$(document.getElementsByClassName(target)).css('display', 'block');
 			$(".tissue").find("input:radio").each(function () { $(this).prop('checked', false); });
 			$(document.getElementsByClassName(target)).first().find("input:radio").prop('checked',true);
@@ -279,7 +278,6 @@
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); return console.warn(error);}
-				//d3.select("#svg-container").selectAll(".track.snps").remove();
 				d3.select("#svg-container").selectAll(".middle.hic").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
@@ -362,8 +360,12 @@
 			var target = selectObj.options[selectObj.selectedIndex].value;
 			$(".tissue").hide();
 			$(document.getElementsByClassName(target)).css('display', 'block');
-			$(".tissue").find("input:radio").each(function () { $(this).prop('checked', false); });
-			$(document.getElementsByClassName(target)).first().find("input:radio").prop('checked',true);			
+			$(".tissue").find("input:radio").each( function () {
+				if ($(this).val() == "{{ default_tissue }}")
+					$(this).prop('checked', true);
+				else
+					$(this).prop('checked', false);
+				});
 
 			$.cookieBar({
 				message: 'Some data on this website are only available after acceptance of our <a style="padding:0px; margin:0px;" href="https://www.immunobase.org/page/Copyright" title="read our data access agreement" target="_blank">data access agreement</a> and cookies.',
