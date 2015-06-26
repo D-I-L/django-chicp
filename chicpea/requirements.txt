@@ -1,2 +1,7 @@
 -e git+http://github.com/btel/svg_utils.git#egg=svgutils
 -e git+http://github.com/D-I-L/django-elastic.git@develop#egg=elastic
+
+CairoSVG==1.0.13
+lxml==3.4.2
+tinycss==0.3
+cssselect==0.9.1
