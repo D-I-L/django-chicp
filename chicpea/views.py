@@ -4,22 +4,24 @@ import logging
 import operator
 import os
 import re
+import subprocess
+from cairosvg import svg2pdf, svg2png
 from svgutils.templates import VerticalLayout, ColumnLayout
 from svgutils.transform import fromstring
 from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.management import call_command
+from django.http.request import QueryDict
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
 
 from chicpea import chicpea_settings
 from chicpea import utils
+from chicpea.chicpea_settings import sampleLookup
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
 from elastic.search import Search, ElasticQuery
-from django.http.request import QueryDict
-from chicpea.chicpea_settings import sampleLookup
 
 
 # Get an instance of a logger
@@ -288,7 +290,6 @@ def chicpeaDownload(request, url):
         response.write(SVG)
     elif output_format == "pdf" or output_format == "png":
         mime_type = "application/x-pdf" if output_format == "pdf" else "image/png"
-        zoom = '10' if output_format == "png" else '1'
 
         response = HttpResponse(content_type=mime_type)
         response['Content-Disposition'] = 'attachment; filename="' + returnFileName + '"'
@@ -296,10 +297,14 @@ def chicpeaDownload(request, url):
         oFile = NamedTemporaryFile(delete=False)
         iFile.write(SVG.encode())
         iFile.close()
-        os.system("rsvg-convert -o '" + str(oFile.name) + "' -z '" + zoom + "' -f '"
-                  + output_format + "' '" + str(iFile.name) + "'")
-        pdfData = oFile.read()
-        response.write(pdfData)
+
+        if output_format == "pdf":
+            svg2pdf(SVG.encode('utf-8'), write_to=str(oFile.name))
+        else:
+            svg2png(SVG.encode('utf-8'), write_to=str(oFile.name))
+
+        fileData = oFile.read()
+        response.write(fileData)
     else:
         retJSON = {"error": "output format was not recognised"}
         response = JsonResponse(retJSON)
