@@ -182,6 +182,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		term = parts[0]
 		region = parts[1];
 		$("#regionSearch").val(region);
+		console.log("here")
 	}	
 	
 	resetPage(term, tissue, breadcrumb)
@@ -235,6 +236,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 				.style("width", "100%")
 				.style("text-align", "center")
 				.style("padding-top", "200px");
+			$.isLoading( "hide" );
 			return;
 		}
 		for (var i = 0; i < hics.length; i++) {
@@ -324,7 +326,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		
 		
 		addSNPTrack(data.snps);
-		addCenterScale();
+		addCenterScale(data.frags);
 		
 		if (extras.length > 0) addExtraData(extras);		
 		
@@ -384,7 +386,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 	});
 }
 
-function addCenterScale(){
+function addCenterScale(frags){
 	var vis = d3.select("#main-svg");
 
     var innerRadius = diameter * 0.4,
@@ -408,7 +410,7 @@ function addCenterScale(){
 	
 	scale_group.append("path").attr("d", arc).attr("id", "arcScale");	
 	
-	var ticks = scale_group.append("g").attr("class", "axis scale ticks").selectAll("svg")
+	var ticks = scale_group.append("g").attr("class", "scale ticks").selectAll("svg")
 		.data(tickData).enter()
 		.append("g")
 		.attr("class", "tick")
@@ -419,7 +421,7 @@ function addCenterScale(){
 	ticks.append("line")
 		.attr("x1", 0)
 		.attr("y1", 0)
-		.attr("x2", 5)
+		.attr("x2", 8)
 		.attr("y2", 0)
 		.style("stroke", "#000");
 
@@ -430,16 +432,36 @@ function addCenterScale(){
 		.style("text-anchor", function(d) { return d.angle > pi ? "end" : null; })
 		.text(function(d) { return d.label; });
 	
+	fragsData = getFragsTicks(frags, outerRadius, arcAvail, startAngle, endAngle, circum, circAvail);
+	
+	var frags = scale_group.append("g").attr("class", "scale ticks frags").selectAll("svg")
+		.data(fragsData).enter()
+		.append("g")
+		.attr("class", "tick").append("line")
+		.attr("x1", function(d){ return d.x1; })
+		.attr("y1", function(d){ return d.y1; })
+		.attr("x2", function(d){ return d.x2; })
+		.attr("y2", function(d){ return d.y2; })
+		.style("stroke", "red");
 		
+		
+/*	var frags = scale_group.append("g").attr("class", "scale ticks frags").selectAll("svg")
+		.data(fragsData).enter()
+		.append("g")
+		.attr("class", "tick")
+		.attr("transform", function (d) {
+				return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")" + "translate(" + outerRadius + ",0)";
+		});
+
+	frags.append("line")
+		.attr("x1", 0)
+		.attr("y1", 0)
+		.attr("x2", 5)
+		.attr("y2", 0)
+		.style("stroke", "red");*/
 		
 	
 	scale_group.append("path").attr("d", arc2).attr("id", "arcBackground").style("fill", "white").style("opacity", 0)
-/*			.on("mouseout", function (d) {
-					if (selecting){
-						selecting = 0;
-						zoomIn(innerRadius, circAvail, angleOffset);
-					}
-			})*/;
 	
 	//var colors = d3.scale.linear().domain([angleOffset, arcAvail]).range(["pink", "purple"]);
 	var segmentData = [];
@@ -501,6 +523,19 @@ function addCenterScale(){
 	vis.select("#fullScale").attr("transform", trans)
 }
 
+function getFragsTicks(frags, outerRadius){
+	var data = [];
+	if (frags.length > 0){
+		for (var i = 0; i < frags.length; i++) {
+			position = frags[i].end;
+			var startcoords = computeCartesian(outerRadius, position, totalBP);
+			var endcoords = computeCartesian(outerRadius+5, position, totalBP);
+			data.push({'x1':startcoords.x, 'y1':startcoords.y, 'x2':endcoords.x, 'y2':endcoords.y});
+		}
+	}
+	return data;	
+}
+
 function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAvail){
 	
 	var end = start + totalBP;
@@ -514,22 +549,23 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	var data = [{'label': null, 'angle': startAngle, 'position': start}];
 
 	var position1 = 1000000 * Math.ceil(start/divisor)/multiplier
-	var angle1 = (circAvail/totalBP)*(position1-start)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
-	data.push({'label': position1/1000000+"Mb", 'position': position1, 'angle': startAngle+angle1});
+    var theta1 = ((((position1-start) / totalBP) * arcAvail) * (pi / 180)) + startAngle;
+	data.push({'label': position1/1000000+"Mb", 'position': position1, 'angle': theta1});
 
 	var position2 = 1000000 * Math.floor(end/divisor)/multiplier
-	var angle2 = (circAvail/totalBP)*(end-position2)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
+    var theta2 = ((((position2-start) / totalBP) * arcAvail) * (pi / 180)) + startAngle;
 
 	var count = Math.ceil((position2-position1)/divisor);
-	var section = ((arcAvail * Math.PI)/180 - angle2 - angle1) / count;
+	var section = (theta2 - theta1) / count;
 
-	var totalAngle = startAngle+angle1;
+	var totalAngle = theta1;
 	for (i=position1+divisor; i<position2; i+=divisor){
 		label = Math.ceil(i/divisor)/multiplier
 		totalAngle += section
 		data.push({'label': label+"Mb", 'position': i, 'angle': totalAngle});
 	}
-	data.push({'label': position2/1000000+"Mb", 'position': position2, 'angle': endAngle-angle2});
+    
+	data.push({'label': position2/1000000+"Mb", 'position': position2, 'angle': theta2});	
 	data.push({'label': null, 'angle': endAngle, 'position': end});
 	
 	return data;
