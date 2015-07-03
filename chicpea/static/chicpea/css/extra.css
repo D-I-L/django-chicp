@@ -141,7 +141,7 @@ svg .panel-seq { font-size: 10px; }
 /* svg path.line { fill: none; stroke: #666; stroke-width: 1.5px; } */
 svg .axis { shape-rendering: crispEdges; }
 svg .y.axis .tick line { stroke: lightgrey; opacity: 0.7; }
-svg .axis .tick text, svg .label { font-size:0.8em; }
+svg .tick text, svg .label { font-size:0.8em; }
 svg .axis line, .axis path { fill: none; stroke: #000; }
 
 svg .genes path { stroke-width: 10; fill: none;}
