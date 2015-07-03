@@ -7,6 +7,7 @@ import re
 hicFields = ['baitEnd', 'baitStart', 'oeStart', 'oeEnd', 'oeID', 'baitID', 'baitChr']
 geneFields = ['start', 'end', 'strand', 'attr.gene_name', 'attr.gene_biotype', 'attr.gene_id']
 snpFields = ['start', 'end', 'score', 'name']
+bedFields = ['start', 'end', 'name']
 tissues = dict()
 
 
