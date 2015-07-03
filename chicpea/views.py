@@ -114,6 +114,7 @@ def chicpeaSearch(request, url):
     targetIdx = queryDict.get("targetIdx")
     blueprint = {}
     hic = []
+    frags = []
     addList = []
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
@@ -130,6 +131,8 @@ def chicpeaSearch(request, url):
     if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
         searchTerm = queryDict.get("searchTerm").lower()
         addList.append(_find_snp_position(queryDict.get("snp_track"), searchTerm))
+        if addList[0].get("error"):
+            return JsonResponse({'error': addList[0]['error']})
         position = addList[0]['end']
         if searchType != 'region':
             searchType = 'snp'
@@ -164,6 +167,10 @@ def chicpeaSearch(request, url):
 
         query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
+
+        if len(hic) == 0:
+            retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
+            return JsonResponse(retJSON)
 
     elif searchType == 'snp':
         if len(addList) > 0:
@@ -211,10 +218,12 @@ def chicpeaSearch(request, url):
     # get genes based on this segment
     genes = _build_gene_query(chrom, segmin, segmax)
     snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    frags = _build_frags_query(getattr(chicpea_settings, 'DEFAULT_FRAG'), chrom, segmin, segmax)
 
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
 
     retJSON = {"hic": hic,
+               "frags": frags,
                "meta": {"ostart": int(segmin),
                         "oend": int(segmax),
                         "rstart": 1,
@@ -370,9 +379,8 @@ def _find_snp_position(snp_track, name):
     if (len(snpResult['data']) > 0):
         chrom = snpResult['data'][0]['seqid'].replace('chr', "")
         position = snpResult['data'][0]['end']
-
-        # addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': searchTerm})
-    return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+        return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+    return {'error': 'Marker '+name+' does not exist in the currently selected dataset'}
 
 
 def _build_snp_query(snp_track, chrom, segmin, segmax):
@@ -398,6 +406,19 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
         snps = snpResult['data']
         snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
     return snps
+
+
+def _build_frags_query(frags_idx, chrom, segmin, segmax):
+
+    query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
+                                  Filter(RangeQuery("end", gte=segmin, lte=segmax)),
+                                  utils.bedFields)
+    fragsQuery = Search(search_query=query, search_from=0, size=2000000, idx=frags_idx)
+
+    fragsResult = fragsQuery.get_result()
+    frags = fragsResult['data']
+    frags = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], frags)
+    return frags
 
 
 def _build_bigbed_query(tissue, chrom, segmin, segmax):
