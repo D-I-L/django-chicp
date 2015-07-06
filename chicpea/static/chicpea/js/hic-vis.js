@@ -22,6 +22,14 @@ function getQueryVariable(variable) {
 	}
 }
 
+function findGeneForExon(genes, gene_id){
+	for (i = 0; i < genes.length; i++) {
+		if (genes[i].gene_id == gene_id)
+			return genes[i];
+	}
+	return null;	
+}
+
 function hasClass(element, cls) {
     return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
 }
@@ -442,24 +450,7 @@ function addCenterScale(frags){
 		.attr("y1", function(d){ return d.y1; })
 		.attr("x2", function(d){ return d.x2; })
 		.attr("y2", function(d){ return d.y2; })
-		.style("stroke", "red");
-		
-		
-/*	var frags = scale_group.append("g").attr("class", "scale ticks frags").selectAll("svg")
-		.data(fragsData).enter()
-		.append("g")
-		.attr("class", "tick")
-		.attr("transform", function (d) {
-				return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")" + "translate(" + outerRadius + ",0)";
-		});
-
-	frags.append("line")
-		.attr("x1", 0)
-		.attr("y1", 0)
-		.attr("x2", 5)
-		.attr("y2", 0)
-		.style("stroke", "red");*/
-		
+		.style("stroke", "red");		
 	
 	scale_group.append("path").attr("d", arc2).attr("id", "arcBackground").style("fill", "white").style("opacity", 0)
 	
@@ -540,8 +531,9 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	
 	var end = start + totalBP;
 	
+	console.log(totalBP);
 	var divisor = 100000, multiplier = 10;
-	if (totalBP < 100000) {
+	if (totalBP < 500000) {
 		divisor = divisor/10;
 		multiplier = multiplier*10;
 	}
@@ -1020,69 +1012,25 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 			// TRACK 2 - GENES
 			var yRangeG = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);
 			var geneTrackOffset = trackHeight + (margin.top);
+			
+			var lineFunction = d3.svg.line()
+				.x(function (d) {
+				return d.x;
+			})
+				.y(function (d) {
+				return d.y;
+			})
+			.interpolate("linear");
 				
 			var gene = svgContainer.append("g").attr("class", "track genes").attr("id", type+"GeneTrack")
 				.selectAll(".gene")
 				.data(data.genes)
-				.enter().append("g")
-				.attr("class", "gene");
-				
-				var lineFunction = d3.svg.line()
-					.x(function (d) {
-					return d.x;
-				})
-					.y(function (d) {
-					return d.y;
-				})
-					.interpolate("linear");
-				
-				gene.append("path")
-					.attr("class", function (d) {
-					return "line "+d.gene_biotype;
-				})
-					.attr("d", function (d) {
-					if (d.strand == "-") {
-						return lineFunction([{
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart) + 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 6
-						}, {
-							x: xRange(d.start + regionStart) + 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}])
-					} else {
-						return lineFunction([{
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart) - 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 6
-						}, {
-							x: xRange(d.end + regionStart) - 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}])
-					}
-				});
+
+			gene.enter().append("g")
+				.attr("class", "gene")
+				.attr("id", function (d) {
+				return d.gene_id;
+			});
 				
 			gene.append("text")
                 .style("text-align", "right")
@@ -1098,6 +1046,82 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.text(function (d) {
 				return d.gene_name;
 			});
+				
+			gene.append("path")
+				.attr("class", function (d) {
+				return "line " + d.gene_biotype;
+			})
+			.attr("style", "stroke-width:1px")
+				.attr("d", function (d) {
+				return lineFunction([{
+					x: xRange(d.start + regionStart),
+					y: geneTrackOffset + 6 + yRangeG((30 * d.bumpLevel))
+				}, {
+					x: xRange(d.end + regionStart),
+					y: geneTrackOffset + 6 + yRangeG((30 * d.bumpLevel))
+				}]);
+			});
+
+			var exon = gene.append("g").attr("class", "track exons").selectAll(".exon")
+				.data(function (d) {
+					return data.exons[d.gene_id];
+				})
+				.enter().append("g")
+				.attr("class", "exon")
+				
+			exon.append("path")
+				.attr("d", function (d) {
+					geneObj = findGeneForExon(gene.data(), d.name);
+						if (geneObj.strand == "-") {
+							return lineFunction([{
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart) - 5,
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 6
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}]);
+						} else {
+							return lineFunction([{
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart) + 5,
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 6
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}])
+						}
+    			})
+				.attr("class", function (d) {
+					geneObj = findGeneForExon(gene.data(), d.name);
+					var classes = "line " + geneObj.gene_biotype;
+					if (d.start != d.end && d.score > 0) { classes += " tss"; }
+					return classes;
+			});
+			
+			
 				
 			// TRACK 3 - BLUEPRINT
 			var yRangeB = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);

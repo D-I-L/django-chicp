@@ -173,6 +173,8 @@ svg .genes path.line.miRNA { fill: #e377c2; }
 svg .genes path.line.snRNA { fill: #8c564b; }
 svg .genes path.line.pseudogene { fill: #7f7f7f; }
 svg .genes path.line.processed_transcript { fill: #bcbd22; }
+
+svg .exon path.line.tss { stroke-width:2px; fill: white }
                 
 svg .arrow_heads path.hilight { fill: yellow; }
 svg .arrow_heads path.misc_RNA { fill: #ff7f0e; }
