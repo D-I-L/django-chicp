@@ -249,6 +249,7 @@ def chicpeaSubSearch(request, url):
     (chrom, segmin, segmax) = mo.group(1, 2, 3)
 
     genes = _build_gene_query(chrom, segmin, segmax)
+    exons = _build_exon_query(chrom, segmin, segmax, genes)
     snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
     blueprint = {}
 
@@ -258,6 +259,7 @@ def chicpeaSubSearch(request, url):
     retJSON = {"blueprint": blueprint,
                "region": str(chrom) + ":" + str(segmin) + "-" + str(segmax),
                "genes": genes,
+               "exons": exons,
                "snps": snps
                }
     response = JsonResponse(retJSON)
@@ -350,7 +352,8 @@ def _build_hic_query(query, targetIdx, segmin=0, segmax=0):
 def _build_gene_query(chrom, segmin, segmax):
     # get genes based on this segment
     geneQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                           size=2000, idx='grch37_75_genes', field_list=utils.geneFields)
+                                           size=2000, idx=getattr(chicpea_settings, 'CP_GENE_IDX')+'/genes/',
+                                           field_list=utils.geneFields)
     geneResult = geneQuery.get_result()
     genes = geneResult['data']
     genes = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], genes)
@@ -360,6 +363,25 @@ def _build_gene_query(chrom, segmin, segmax):
         o.update({"length": (o['end']-o['start'])})
     genes.sort(key=operator.itemgetter('length'))
     return genes
+
+
+def _build_exon_query(chrom, segmin, segmax, genes):
+    # get exonic structure for genes in this section
+    geneExons = dict()
+    query_bool = BoolQuery()
+    query_bool.must([Query.term("seqid", chrom)])
+    if len(genes) > 0:
+        for g in genes:
+            query = ElasticQuery.filtered_bool(Query.query_string(g["gene_id"], fields=["name"]),
+                                               query_bool, sources=utils.snpFields)
+            elastic = Search(query, idx=getattr(chicpea_settings, 'CP_GENE_IDX')+'/exons/', search_from=0, size=2000)
+            result = elastic.get_result()
+            exons = result['data']
+            print(segmin+".."+segmax)
+            exons = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], exons)
+            print(exons)
+            geneExons[g["gene_id"]] = sorted(exons, key=operator.itemgetter("start"))
+    return geneExons
 
 
 def _find_snp_position(snp_track, name):
