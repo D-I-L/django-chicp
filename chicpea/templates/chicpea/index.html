@@ -253,7 +253,7 @@
 			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
-				if (error) {$.isLoading( "hide" ); return console.warn(error);}
+				if (error) {$.isLoading( "hide" ); console.warn(error);return;}
 				d3.select("#svg-container").selectAll(".track.snps").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
@@ -277,7 +277,7 @@
 			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
-				if (error) {$.isLoading( "hide" ); return console.warn(error);}
+				if (error) {$.isLoading( "hide" ); console.warn(error); return}
 				d3.select("#svg-container").selectAll(".middle.hic").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
@@ -291,6 +291,7 @@
 						.style("width", "100%")
 						.style("text-align", "center")
 						.style("padding-top", "200px");
+			        $.isLoading( "hide" );
 					return;
 				}
 				for (var i = 0; i < hics.length; i++) {
