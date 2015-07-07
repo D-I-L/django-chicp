@@ -531,7 +531,6 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	
 	var end = start + totalBP;
 	
-	console.log(totalBP);
 	var divisor = 100000, multiplier = 10;
 	if (totalBP < 500000) {
 		divisor = divisor/10;
