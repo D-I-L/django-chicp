@@ -9,7 +9,7 @@ CHICP_IDX = OrderedDict([
      ),
     ])
 
-sampleLookup = {'}
+sampleLookup = {}
 
 DEFAULT_TARGET = ''
 DEFAULT_TISSUE = ''
