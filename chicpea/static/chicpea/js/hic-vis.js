@@ -22,6 +22,14 @@ function getQueryVariable(variable) {
 	}
 }
 
+function findGeneForExon(genes, gene_id){
+	for (i = 0; i < genes.length; i++) {
+		if (genes[i].gene_id == gene_id)
+			return genes[i];
+	}
+	return null;	
+}
+
 function hasClass(element, cls) {
     return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
 }
@@ -182,6 +190,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		term = parts[0]
 		region = parts[1];
 		$("#regionSearch").val(region);
+		console.log("here")
 	}	
 	
 	resetPage(term, tissue, breadcrumb)
@@ -235,6 +244,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 				.style("width", "100%")
 				.style("text-align", "center")
 				.style("padding-top", "200px");
+			$.isLoading( "hide" );
 			return;
 		}
 		for (var i = 0; i < hics.length; i++) {
@@ -324,7 +334,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 		
 		
 		addSNPTrack(data.snps);
-		addCenterScale();
+		addCenterScale(data.frags);
 		
 		if (extras.length > 0) addExtraData(extras);		
 		
@@ -384,7 +394,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 	});
 }
 
-function addCenterScale(){
+function addCenterScale(frags){
 	var vis = d3.select("#main-svg");
 
     var innerRadius = diameter * 0.4,
@@ -408,7 +418,7 @@ function addCenterScale(){
 	
 	scale_group.append("path").attr("d", arc).attr("id", "arcScale");	
 	
-	var ticks = scale_group.append("g").attr("class", "axis scale ticks").selectAll("svg")
+	var ticks = scale_group.append("g").attr("class", "scale ticks").selectAll("svg")
 		.data(tickData).enter()
 		.append("g")
 		.attr("class", "tick")
@@ -419,7 +429,7 @@ function addCenterScale(){
 	ticks.append("line")
 		.attr("x1", 0)
 		.attr("y1", 0)
-		.attr("x2", 5)
+		.attr("x2", 8)
 		.attr("y2", 0)
 		.style("stroke", "#000");
 
@@ -430,16 +440,19 @@ function addCenterScale(){
 		.style("text-anchor", function(d) { return d.angle > pi ? "end" : null; })
 		.text(function(d) { return d.label; });
 	
-		
-		
+	fragsData = getFragsTicks(frags, outerRadius, arcAvail, startAngle, endAngle, circum, circAvail);
+	
+	var frags = scale_group.append("g").attr("class", "scale ticks frags").selectAll("svg")
+		.data(fragsData).enter()
+		.append("g")
+		.attr("class", "tick").append("line")
+		.attr("x1", function(d){ return d.x1; })
+		.attr("y1", function(d){ return d.y1; })
+		.attr("x2", function(d){ return d.x2; })
+		.attr("y2", function(d){ return d.y2; })
+		.style("stroke", "red");		
 	
 	scale_group.append("path").attr("d", arc2).attr("id", "arcBackground").style("fill", "white").style("opacity", 0)
-/*			.on("mouseout", function (d) {
-					if (selecting){
-						selecting = 0;
-						zoomIn(innerRadius, circAvail, angleOffset);
-					}
-			})*/;
 	
 	//var colors = d3.scale.linear().domain([angleOffset, arcAvail]).range(["pink", "purple"]);
 	var segmentData = [];
@@ -501,12 +514,25 @@ function addCenterScale(){
 	vis.select("#fullScale").attr("transform", trans)
 }
 
+function getFragsTicks(frags, outerRadius){
+	var data = [];
+	if (frags.length > 0){
+		for (var i = 0; i < frags.length; i++) {
+			position = frags[i].end;
+			var startcoords = computeCartesian(outerRadius, position, totalBP);
+			var endcoords = computeCartesian(outerRadius+5, position, totalBP);
+			data.push({'x1':startcoords.x, 'y1':startcoords.y, 'x2':endcoords.x, 'y2':endcoords.y});
+		}
+	}
+	return data;	
+}
+
 function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAvail){
 	
 	var end = start + totalBP;
 	
 	var divisor = 100000, multiplier = 10;
-	if (totalBP < 100000) {
+	if (totalBP < 500000) {
 		divisor = divisor/10;
 		multiplier = multiplier*10;
 	}
@@ -514,22 +540,23 @@ function getTickData(innerRadius, arcAvail, startAngle, endAngle, circum, circAv
 	var data = [{'label': null, 'angle': startAngle, 'position': start}];
 
 	var position1 = 1000000 * Math.ceil(start/divisor)/multiplier
-	var angle1 = (circAvail/totalBP)*(position1-start)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
-	data.push({'label': position1/1000000+"Mb", 'position': position1, 'angle': startAngle+angle1});
+    var theta1 = ((((position1-start) / totalBP) * arcAvail) * (pi / 180)) + startAngle;
+	data.push({'label': position1/1000000+"Mb", 'position': position1, 'angle': theta1});
 
 	var position2 = 1000000 * Math.floor(end/divisor)/multiplier
-	var angle2 = (circAvail/totalBP)*(end-position2)/(2 * Math.PI * (diameter/2)) * (2 * Math.PI);
+    var theta2 = ((((position2-start) / totalBP) * arcAvail) * (pi / 180)) + startAngle;
 
 	var count = Math.ceil((position2-position1)/divisor);
-	var section = ((arcAvail * Math.PI)/180 - angle2 - angle1) / count;
+	var section = (theta2 - theta1) / count;
 
-	var totalAngle = startAngle+angle1;
+	var totalAngle = theta1;
 	for (i=position1+divisor; i<position2; i+=divisor){
 		label = Math.ceil(i/divisor)/multiplier
 		totalAngle += section
 		data.push({'label': label+"Mb", 'position': i, 'angle': totalAngle});
 	}
-	data.push({'label': position2/1000000+"Mb", 'position': position2, 'angle': endAngle-angle2});
+    
+	data.push({'label': position2/1000000+"Mb", 'position': position2, 'angle': theta2});	
 	data.push({'label': null, 'angle': endAngle, 'position': end});
 	
 	return data;
@@ -984,69 +1011,25 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 			// TRACK 2 - GENES
 			var yRangeG = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);
 			var geneTrackOffset = trackHeight + (margin.top);
+			
+			var lineFunction = d3.svg.line()
+				.x(function (d) {
+				return d.x;
+			})
+				.y(function (d) {
+				return d.y;
+			})
+			.interpolate("linear");
 				
 			var gene = svgContainer.append("g").attr("class", "track genes").attr("id", type+"GeneTrack")
 				.selectAll(".gene")
 				.data(data.genes)
-				.enter().append("g")
-				.attr("class", "gene");
-				
-				var lineFunction = d3.svg.line()
-					.x(function (d) {
-					return d.x;
-				})
-					.y(function (d) {
-					return d.y;
-				})
-					.interpolate("linear");
-				
-				gene.append("path")
-					.attr("class", function (d) {
-					return "line "+d.gene_biotype;
-				})
-					.attr("d", function (d) {
-					if (d.strand == "-") {
-						return lineFunction([{
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart) + 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 6
-						}, {
-							x: xRange(d.start + regionStart) + 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}])
-					} else {
-						return lineFunction([{
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart) - 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 12
-						}, {
-							x: xRange(d.end + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel)) + 6
-						}, {
-							x: xRange(d.end + regionStart) - 5,
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}, {
-							x: xRange(d.start + regionStart),
-							y: geneTrackOffset + yRangeG((30 * d.bumpLevel))
-						}])
-					}
-				});
+
+			gene.enter().append("g")
+				.attr("class", "gene")
+				.attr("id", function (d) {
+				return d.gene_id;
+			});
 				
 			gene.append("text")
                 .style("text-align", "right")
@@ -1062,6 +1045,82 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.text(function (d) {
 				return d.gene_name;
 			});
+				
+			gene.append("path")
+				.attr("class", function (d) {
+				return "line " + d.gene_biotype;
+			})
+			.attr("style", "stroke-width:1px")
+				.attr("d", function (d) {
+				return lineFunction([{
+					x: xRange(d.start + regionStart),
+					y: geneTrackOffset + 6 + yRangeG((30 * d.bumpLevel))
+				}, {
+					x: xRange(d.end + regionStart),
+					y: geneTrackOffset + 6 + yRangeG((30 * d.bumpLevel))
+				}]);
+			});
+
+			var exon = gene.append("g").attr("class", "track exons").selectAll(".exon")
+				.data(function (d) {
+					return data.exons[d.gene_id];
+				})
+				.enter().append("g")
+				.attr("class", "exon")
+				
+			exon.append("path")
+				.attr("d", function (d) {
+					geneObj = findGeneForExon(gene.data(), d.name);
+						if (geneObj.strand == "-") {
+							return lineFunction([{
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart) - 5,
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 6
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}]);
+						} else {
+							return lineFunction([{
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 12
+							}, {
+								x: xRange(d.end + regionStart) + 5,
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel)) + 6
+							}, {
+								x: xRange(d.end + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}, {
+								x: xRange(d.start + regionStart),
+								y: geneTrackOffset + yRangeG((30 * geneObj.bumpLevel))
+							}])
+						}
+    			})
+				.attr("class", function (d) {
+					geneObj = findGeneForExon(gene.data(), d.name);
+					var classes = "line " + geneObj.gene_biotype;
+					if (d.start != d.end && d.score > 0) { classes += " tss"; }
+					return classes;
+			});
+			
+			
 				
 			// TRACK 3 - BLUEPRINT
 			var yRangeB = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);

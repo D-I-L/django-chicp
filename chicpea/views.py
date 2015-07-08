@@ -114,6 +114,7 @@ def chicpeaSearch(request, url):
     targetIdx = queryDict.get("targetIdx")
     blueprint = {}
     hic = []
+    frags = []
     addList = []
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
@@ -130,6 +131,8 @@ def chicpeaSearch(request, url):
     if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
         searchTerm = queryDict.get("searchTerm").lower()
         addList.append(_find_snp_position(queryDict.get("snp_track"), searchTerm))
+        if addList[0].get("error"):
+            return JsonResponse({'error': addList[0]['error']})
         position = addList[0]['end']
         if searchType != 'region':
             searchType = 'snp'
@@ -164,6 +167,10 @@ def chicpeaSearch(request, url):
 
         query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
+
+        if len(hic) == 0:
+            retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
+            return JsonResponse(retJSON)
 
     elif searchType == 'snp':
         if len(addList) > 0:
@@ -211,10 +218,12 @@ def chicpeaSearch(request, url):
     # get genes based on this segment
     genes = _build_gene_query(chrom, segmin, segmax)
     snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    frags = _build_frags_query(getattr(chicpea_settings, 'DEFAULT_FRAG'), chrom, segmin, segmax)
 
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
 
     retJSON = {"hic": hic,
+               "frags": frags,
                "meta": {"ostart": int(segmin),
                         "oend": int(segmax),
                         "rstart": 1,
@@ -240,6 +249,7 @@ def chicpeaSubSearch(request, url):
     (chrom, segmin, segmax) = mo.group(1, 2, 3)
 
     genes = _build_gene_query(chrom, segmin, segmax)
+    exons = _build_exon_query(chrom, segmin, segmax, genes)
     snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
     blueprint = {}
 
@@ -249,6 +259,7 @@ def chicpeaSubSearch(request, url):
     retJSON = {"blueprint": blueprint,
                "region": str(chrom) + ":" + str(segmin) + "-" + str(segmax),
                "genes": genes,
+               "exons": exons,
                "snps": snps
                }
     response = JsonResponse(retJSON)
@@ -278,11 +289,14 @@ def chicpeaDownload(request, url):
         layout.add_figure(fromstring(svgPanels))
         layout._generate_layout()
         SVG = layout.to_str().decode()
-        SVG = SVG.replace('translate(0, 270)', 'translate(0, 350)')
+        p = re.compile(r'translate\((\d+), 0\)')
+        m = p.search(SVG)
+        SVG = re.sub(r'translate\(\d+, 0\)', r'translate('+str(int(m.group(1)) + 40)+', 50)', SVG)
+        SVG = SVG.replace('translate(0, 270)', 'translate(0, 390)')
 
-    SVG = SVG.replace('<svg ', '<svg style="padding:40px;width:1500px;height:750px;" ')
-    SVG = SVG.replace("</svg>",
-                      '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
+    SVG = SVG.replace('<g>', '<g transform="translate(20,30) scale(1)">', 1)
+    SVG = SVG.replace('<svg ', '<svg style="width:1600px;height:800px;" ')
+    SVG = SVG.replace("</svg>", '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
     if output_format == "svg":
         response = HttpResponse(content_type='image/svg+xml')
@@ -341,7 +355,8 @@ def _build_hic_query(query, targetIdx, segmin=0, segmax=0):
 def _build_gene_query(chrom, segmin, segmax):
     # get genes based on this segment
     geneQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
-                                           size=2000, idx='grch37_75_genes', field_list=utils.geneFields)
+                                           size=2000, idx=getattr(chicpea_settings, 'CP_GENE_IDX')+'/genes/',
+                                           field_list=utils.geneFields)
     geneResult = geneQuery.get_result()
     genes = geneResult['data']
     genes = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], genes)
@@ -351,6 +366,23 @@ def _build_gene_query(chrom, segmin, segmax):
         o.update({"length": (o['end']-o['start'])})
     genes.sort(key=operator.itemgetter('length'))
     return genes
+
+
+def _build_exon_query(chrom, segmin, segmax, genes):
+    # get exonic structure for genes in this section
+    geneExons = dict()
+    query_bool = BoolQuery()
+    query_bool.must([Query.term("seqid", chrom)])
+    if len(genes) > 0:
+        for g in genes:
+            query = ElasticQuery.filtered_bool(Query.query_string(g["gene_id"], fields=["name"]),
+                                               query_bool, sources=utils.snpFields)
+            elastic = Search(query, idx=getattr(chicpea_settings, 'CP_GENE_IDX')+'/exons/', search_from=0, size=2000)
+            result = elastic.get_result()
+            exons = result['data']
+            exons = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], exons)
+            geneExons[g["gene_id"]] = sorted(exons, key=operator.itemgetter("start"))
+    return geneExons
 
 
 def _find_snp_position(snp_track, name):
@@ -370,9 +402,8 @@ def _find_snp_position(snp_track, name):
     if (len(snpResult['data']) > 0):
         chrom = snpResult['data'][0]['seqid'].replace('chr', "")
         position = snpResult['data'][0]['end']
-
-        # addList.append({'chr': chrom, 'start': (position-1), 'end': position, 'name': searchTerm})
-    return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+        return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+    return {'error': 'Marker '+name+' does not exist in the currently selected dataset'}
 
 
 def _build_snp_query(snp_track, chrom, segmin, segmax):
@@ -398,6 +429,19 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
         snps = snpResult['data']
         snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
     return snps
+
+
+def _build_frags_query(frags_idx, chrom, segmin, segmax):
+
+    query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
+                                  Filter(RangeQuery("end", gte=segmin, lte=segmax)),
+                                  utils.bedFields)
+    fragsQuery = Search(search_query=query, search_from=0, size=2000000, idx=frags_idx)
+
+    fragsResult = fragsQuery.get_result()
+    frags = fragsResult['data']
+    frags = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], frags)
+    return frags
 
 
 def _build_bigbed_query(tissue, chrom, segmin, segmax):

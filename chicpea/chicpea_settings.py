@@ -29,5 +29,7 @@ sampleLookup = {}
 DEFAULT_TARGET = ''
 DEFAULT_TISSUE = ''
 DEFAULT_TRACK = ''
+DEFAULT_FRAG = ''
+CP_GENE_IDX = ''
 
 TARGET_IDXS = {}

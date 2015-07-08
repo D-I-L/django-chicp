@@ -141,7 +141,7 @@ svg .panel-seq { font-size: 10px; }
 /* svg path.line { fill: none; stroke: #666; stroke-width: 1.5px; } */
 svg .axis { shape-rendering: crispEdges; }
 svg .y.axis .tick line { stroke: lightgrey; opacity: 0.7; }
-svg .axis .tick text, svg .label { font-size:0.8em; }
+svg .tick text, svg .label { font-size:0.8em; }
 svg .axis line, .axis path { fill: none; stroke: #000; }
 
 svg .genes path { stroke-width: 10; fill: none;}
@@ -173,6 +173,8 @@ svg .genes path.line.miRNA { fill: #e377c2; }
 svg .genes path.line.snRNA { fill: #8c564b; }
 svg .genes path.line.pseudogene { fill: #7f7f7f; }
 svg .genes path.line.processed_transcript { fill: #bcbd22; }
+
+svg .exon path.line.tss { stroke-width:2px; fill: white }
                 
 svg .arrow_heads path.hilight { fill: yellow; }
 svg .arrow_heads path.misc_RNA { fill: #ff7f0e; }
