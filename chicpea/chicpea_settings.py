@@ -7,6 +7,21 @@ CHICP_IDX = OrderedDict([
                                ])
                   }
      ),
+    ('ic', {'NAME': 'ImmunoChip', 'INDEX': 'idx_name', 'TRACKS':
+            OrderedDict([
+                         ])
+            }
+     ),
+    ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'idx_name', 'TRACKS':
+              OrderedDict([
+                         ])
+              }
+     ),
+    ('pmi', {'NAME': 'PMI Data', 'INDEX': 'idx_name', 'TRACKS':
+             OrderedDict([
+                          ])
+             }
+     )
     ])
 
 sampleLookup = {}
