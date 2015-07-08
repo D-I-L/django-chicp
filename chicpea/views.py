@@ -289,14 +289,11 @@ def chicpeaDownload(request, url):
         layout.add_figure(fromstring(svgPanels))
         layout._generate_layout()
         SVG = layout.to_str().decode()
-        p = re.compile(r'translate\((\d+), 0\)')
-        m = p.search(SVG)
-        SVG = re.sub(r'translate\(\d+, 0\)', r'translate('+str(int(m.group(1)) + 40)+', 50)', SVG)
-        SVG = SVG.replace('translate(0, 270)', 'translate(0, 390)')
+        SVG = SVG.replace('translate(0, 270)', 'translate(0, 350)')
 
-    SVG = SVG.replace('<g>', '<g transform="translate(20,30) scale(1)">', 1)
-    SVG = SVG.replace('<svg ', '<svg style="width:1600px;height:800px;" ')
-    SVG = SVG.replace("</svg>", '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
+    SVG = SVG.replace('<svg ', '<svg style="padding:40px;width:1500px;height:750px;" ')
+    SVG = SVG.replace("</svg>",
+                      '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
     if output_format == "svg":
         response = HttpResponse(content_type='image/svg+xml')
@@ -380,7 +377,9 @@ def _build_exon_query(chrom, segmin, segmax, genes):
             elastic = Search(query, idx=getattr(chicpea_settings, 'CP_GENE_IDX')+'/exons/', search_from=0, size=2000)
             result = elastic.get_result()
             exons = result['data']
+            print(segmin+".."+segmax)
             exons = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], exons)
+            print(exons)
             geneExons[g["gene_id"]] = sorted(exons, key=operator.itemgetter("start"))
     return geneExons
 
