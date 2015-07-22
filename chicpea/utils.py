@@ -44,6 +44,7 @@ def makeRelative(segstart, segend, coord_fields, coords):
     ret = []
     for f in coords:
         for n in coord_fields:
+            f[n+'_ori'] = f[n]
             coord = int(f[n]) - segstart + 1
             # print(coord)
             if(coord > 0):
