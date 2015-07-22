@@ -5,3 +5,4 @@ CairoSVG==1.0.13
 lxml==3.4.2
 tinycss==0.3
 cssselect==0.9.1
+django-analytical==0.22.0
