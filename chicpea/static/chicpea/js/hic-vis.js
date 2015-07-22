@@ -575,6 +575,7 @@ function addExtraData(extras){
 		.data(extras.filter(function (d) { return CHR==d.chr; }))
 		.enter()
 		.append("path")
+		.attr("class", "extras")
 		.attr("d", function (d) {
 				padding = (totalBP/1000) - (d.end-d.start);
 				return (computeStrandPath(d.start-(padding/2), d.end+(padding/2), diameter * 0.35, totalBP));
@@ -582,15 +583,9 @@ function addExtraData(extras){
 		.attr("transform", trans)
 		.attr("stroke", "red")
 		.attr("stroke-width", "100")
-		.on("mouseover", function (d) {
-			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-			div.html(d.name).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY) + "px");
-			d3.select(this).style("opacity", 0.3);
-		})
-		.on("mouseout", function (d) {
-				div.transition().duration(500).style("opacity", 0);
-				d3.select(this).style("opacity", 1);
-		});
+		.attr("title", function (d) { return styleTooltip(d.name, ""); });
+		
+	vis.selectAll("path.extras").each(function(x) { $(this).tipsy({ gravity: 'e', opacity: 1, html: true, offset: 5, hoverlock: true }); });
 }
 
 function addGeneTrack(meta, genes, totalBP){
@@ -634,23 +629,10 @@ function addGeneTrack(meta, genes, totalBP){
 		.on("click", function (d) {
 				$("#search_term").val(d.gene_name);
 				var term = $("#search_term").val().toUpperCase();
-				div.transition().duration(500).style("opacity", 0);
 				d3.selectAll("svg").remove();
 				renderHic(term, tissue, diameter, 1);
 				return false;
 		})
-		/*.on("mouseover", function (d, i) {
-			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-			div.html(d.gene_name + "</br>" + d.gene_biotype + "</br>" + d.gene_id + "</br>" + numberWithCommas(parseInt(d.start) + start) + "</br>" + numberWithCommas(parseInt(d.end) + start))
-				.style("left", (d3.event.pageX) + "px")
-				.style("top", (d3.event.pageY - 28) + "px");
-				                                                                    
-			d3.select(this).style("opacity", 0.3);
-		})
-		.on("mouseout", function (d) {
-				div.transition().duration(500).style("opacity", 0);
-				d3.select(this).style("opacity", 1);
-		});*/
 		
 		vis.selectAll("path.gene")
 			.attr("title", function(g) { return styleTooltip(g.gene_name, g.gene_biotype + "</br>" + g.gene_id + "</br>" + numberWithCommas(parseInt(g.start) + start) + "</br>" + numberWithCommas(parseInt(g.end) + start)) })
@@ -659,7 +641,7 @@ function addGeneTrack(meta, genes, totalBP){
 					$(this).on('mouseenter',function(e){
 							pos.top = e.pageY
 							pos.left = e.pageX
-					}).tipsy({ gravity: $.fn.tipsy.autoNSEW, opacity: 1, html: true, pos: pos }); });
+					}).tipsy({ gravity: $.fn.tipsy.autoNSEW, opacity: 1, html: true, pos: pos, offset: 5, hoverlock: true }); });
 
 			
 /*		gene.append("text")
@@ -744,22 +726,8 @@ function addSNPTrackPoints(meta, snps, totalBP){
 				//if (parseFloat(d.score) == maxscore) return "red";
 				if (parseFloat(d.score) >= 7.03) return "green";
 				return "darkgrey";
-		})
-/*		.on("mouseover", function (d, i) {
-				div.transition().duration(200).style("opacity", 0.9);
-				div.html(d.name + "</br>P Value (-log10) = " + parseFloat(d.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(meta.rstart)) + "</br>")
-				.attr("class", "tooltip")
-				.style("left", (d3.event.pageX) + "px")
-				.style("top", (d3.event.pageY - 28) + "px");
-				                                                     
-				d3.select(this).style("opacity", 0.3);
-		})
-		.on("mouseout", function (d) {
-				div.transition().duration(500).style("opacity", 0);
-				d3.select(this).style("opacity", 1);
-		})*/                                                     
+		})                                                    
 		.on("click", function (d) {
-				div.transition().duration(0).style("opacity", 0);
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
             	d3.selectAll("svg").remove();
@@ -769,7 +737,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 		
 		vis.selectAll("path.snp")
 			.attr("title", function(s) { return styleTooltip(s.name, "P Value (-log10) = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(meta.rstart))) })
-			.each(function(s) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
+			.each(function(s) { $(this).tipsy({ gravity: "w", opacity: 1, html: true, offset: 5, hoverlock: true }); });
 		
 		return maxscore;
 }
@@ -832,9 +800,6 @@ function pathDetails(interactions){
 			}
 	})
 	.on("mouseover", function (d, i) {
-			//div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-			//div.html("Score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
-			
 			vis.selectAll("path.interaction").sort(function (a, b) {
 					if (parseFloat(a[tissue]) < localStorage["interactionScore"]) return -1;
 					if (a[tissue] > b[tissue]) return 1;
@@ -873,7 +838,6 @@ function pathDetails(interactions){
 				.attr("fill", "none")
 	})
 	.on("mouseout", function (d, i) {
-			//div.transition().duration(500).style("opacity", 0);
 			d3.select(this).classed('hover', false);
 			vis.selectAll(".deleteMe").remove();			
 			
@@ -1023,24 +987,11 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				})
 				.attr("transform", function (d) {
 					return "translate(" + xRange(d.start + regionStart) + "," + yRangeS(d.score) + ")";
-				})
-				/*.on("mouseover", function (d, i) {
-						div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-						div.html(d.name + "</br>" + d3.round(d.score, 3) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(regionStart)))
-							.style("left", (d3.event.pageX + 10) + "px")
-							.style("top", (d3.event.pageY - 18) + "px");
-						d3.select(this).style("opacity", 0.3);
-				})
-				.on("mouseout", function (d) {
-						div.transition()
-							.duration(500)
-							.style("opacity", 0);
-						d3.select(this).style("opacity", 1);
-				})*/;
+				});
 		
 			svgContainer.selectAll("path.marker")
 				.attr("title", function(s) { return styleTooltip('<a href="http://www.immunobase.org/page/Overview/display/marker/'+s.name+'" target="_blank">'+s.name+'</a>', "P Value (-log10) = " + d3.round(s.score, 3) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(regionStart))) })
-				.each(function(s) { $(this).tipsy({ gravity: $.fn.tipsy.autoWE, opacity: 1, html: true, delayOut: 2000 }); });
+				.each(function(s) { $(this).tipsy({ gravity: $.fn.tipsy.autoWE, opacity: 1, html: true, offset: 5, hoverlock: true }); });
 				
 			// TRACK 2 - GENES
 			var yRangeG = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);
@@ -1189,32 +1140,23 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					//.attr("class", "blueprint");*/
 				
 				states.append("path")
-					.attr("class", "line")
+					.attr("class", "line bp_states")
 					.attr("d", function (d) {
 							return line([ { x: d.start, y: trackOffset}, { x: d.end, y: trackOffset }]);
 					})
 					.attr("stroke", function (d) { return "rgb("+d.color+")"; })
-					.attr("stroke-width", "6px")
-					.on("mouseover", function (d, i) {
-							div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-							div.html("<strong>"+d.desc+"</strong>")
-								.style("left", (d3.event.pageX + 10) + "px")
-								.style("top", (d3.event.pageY - 18) + "px");
-							d3.select(this).style("opacity", 0.3);
-					})
-					.on("mouseout", function (d) {
-							div.transition()
-								.duration(500)
-								.style("opacity", 0);
-							d3.select(this).style("opacity", 1);
-					});
+					.attr("stroke-width", "6px");
 					
-					blueprint.append("text")
-						.attr("x", 0)
-						.attr("y", trackOffset+10)
-						.attr("dy", ".35em")
-						.style("font-size", "0.9em")
-						.text(sample)
+				svgContainer.selectAll("path.bp_states")
+					.attr("title", function(s){ return styleTooltip(sample, s.desc) })
+					.each(function(s) { $(this).tipsy({ gravity: 'n', opacity: 1, html: true, offset: 5, hoverlock: true }); });
+					
+				blueprint.append("text")
+					.attr("x", -20)
+					.attr("y", trackOffset+10)
+					.attr("dy", ".35em")
+					.style("font-size", "0.9em")
+					.text(sample)
 			}
 			$("#panel-" + type).isLoading( "hide" ); 
 	});	
@@ -1243,7 +1185,6 @@ function renderVis() {
 }
 
 function resetVis() {
-//	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
 	d3.select("#message").remove();	
 	d3.select("#svg-container").selectAll(".deleteClick").remove();
 	$(".deleteClick").remove();
@@ -1256,7 +1197,6 @@ function resetVis() {
 
 function zoomIn(innerRadius, circAvail, angleOffset){
 	selectedArray = d3.selectAll(".selected")[0];
-	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
 	if (selectedArray.length > 0) {
 		s1 = parseInt(selectedArray[0].id.replace("seg", ""))
 		s2 = parseInt(selectedArray[selectedArray.length-1].id.replace("seg", ""))
