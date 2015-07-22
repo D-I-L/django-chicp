@@ -452,7 +452,7 @@
 	    		userSettings.empty();
 	    		for (var i = 0; i < localStorage.length; i++){
 	    			if (localStorage.key(i).match(/userdata-/g)){
-	    				console.log(localStorage.key(i))
+	    				//console.log(localStorage.key(i))
 	    				optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
 	    				userSettings.append('<li id="'+localStorage.key(i)+'"><i class="fa fa-trash-o deleteUD" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+localStorage.getItem(localStorage.key(i))+'</li>');
 	    			}
