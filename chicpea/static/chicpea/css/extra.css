@@ -111,8 +111,17 @@ body {
 	color: red;
 }
 
+#scoreSlider .slider-track-high {
+	background: blue;
+	background-image:
+    linear-gradient(
+      to right, 
+      blue, red
+    );
+}
+
 /* css for svg images */
-div.tooltip {
+div.svg-tooltip {
 	position: absolute;
 	text-align: center;
 	width: 100px;
