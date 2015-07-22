@@ -13,16 +13,17 @@
 <title>Capture HiC Plotter</title>
 
 <!-- Latest compiled and minified CSS -->
-<link rel="stylesheet"
-	href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
-<link rel="stylesheet"
-	href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 
+<link href="{% static "chicpea/css/bootstrap-slider.css" %}" rel="stylesheet">
 <link href="{% static "chicpea/css/bootstrap.fd.css" %}" rel="stylesheet">
 <link href="{% static "chicpea/css/jquery.cookiebar.css" %}" rel="stylesheet">
+<link href="{% static "chicpea/css/tipsy.css" %}" rel="stylesheet">
 
 <!-- Custom styles for this template -->
 <link href="{% static "chicpea/css/extra.css" %}" rel="stylesheet">
+<link href="{% static "chicpea/css/modal.css" %}" rel="stylesheet">
 
 <style>
 <!--
@@ -45,16 +46,20 @@
 	<nav class="navbar navbar-inverse navbar-fixed-top">
 		<div class="container-fluid">
 			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed"
-					data-toggle="collapse" data-target="#navbar" aria-expanded="false"
-					aria-controls="navbar">
-					<span class="sr-only">Toggle navigation</span> <span
-						class="icon-bar"></span> <span class="icon-bar"></span> <span
-						class="icon-bar"></span>
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+					<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="/chicpea/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
+				<a class="navbar-brand" href="/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
 			</div>
-		</div>
+			<div id="navbar" class="navbar-collapse collapse">
+				<ul class="nav navbar-nav navbar-right">
+					<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
+				</ul>
+			</div><!--/.nav-collapse -->
+		</div><!--/.container-fluid -->
 	</nav>
 
 	<div class="container-fluid">
@@ -174,6 +179,36 @@
 			</div>
 		</div>
 	</div>
+	
+	<!-- line modal -->
+	<div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span><span class="sr-only">Close</span></button>
+					<h3 class="modal-title" id="lineModalLabel">CHiCP Settings</h3>
+				</div>
+				
+				<div class="modal-body">
+					<!-- content goes here -->
+					<span id="scoreSliderValLabel">Interaction Score:&nbsp;</span><input id="scoreSliderInput" type="text" />&nbsp;<span id="scoreSliderVal">5</span>
+					<h4>User Data Tracks</h4>
+					<ul id="userSettings" style="padding:0px; list-style:none;"></ul>
+				</div>
+
+				<div class="modal-footer">
+					<div class="btn-group btn-group-justified" role="group" aria-label="group button">
+						<div class="btn-group" role="group">
+							<button type="button" id="saveSettings" class="btn btn-primary" data-action="save" role="button">Save</button>
+						</div>
+						<div class="btn-group" role="group">
+							<button type="button" class="btn btn-default" data-dismiss="modal" role="button">Close</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<!-- Hidden <FORM> to submit the SVG data to the server, which will convert it to SVG/PDF/PNG downloadable file.
 		The form is populated and submitted by the JavaScript below. -->
@@ -195,11 +230,13 @@
 	<!-- Bootstrap core JavaScript
 		================================================== -->
 	<!-- Placed at the end of the document so the pages load faster -->
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/tipsy.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/bootstrap.fd.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookie.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookiebar.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/bootstrap-slider.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
 	<script type="text/javascript">
 		function styles() {
@@ -311,6 +348,27 @@
 			});
 		}
 		$(document).ready(function() {
+		
+			localStorage["interactionScore"] = localStorage["interactionScore"] || 5;
+			
+			// Interaction Score Slider
+			$("#scoreSliderVal").text(localStorage["interactionScore"])
+			$("#scoreSliderInput").slider({ id: "scoreSlider", value: parseInt(localStorage["interactionScore"]), min: 0, max: 20, step: 0.5 });
+			$("#scoreSliderInput").on("slide", function(slideEvt) {
+				$("#scoreSliderVal").text(slideEvt.value);
+			});
+			
+			$("#saveSettings").click(function() {
+				localStorage["interactionScore"] = $("#scoreSliderInput").val();
+				renderVis();
+				$('#settingsModal').modal('hide');
+			});
+			
+			$(".fa-trash-o").on("click", function(e) {
+				console.log(e);			
+			});
+			
+			
 			
 			$("#save_as_svg").click(function() {
 				submit_download_form("svg");
@@ -343,10 +401,12 @@
 	                	contentType: false,   // tell jQuery not to set contentType
 	                	success: function(data){
 	                		optGroup = $("#userData");
+	                		userSettings = $("#userSettings");
 	                		for (i = 0; i < data.userSNPTracks.length; i++) {
 	                			f = data.userSNPTracks[i]
-	                			optGroup.append('<option value="userdata-'+f.value+'">'+f.text+'</option>');
 	                			localStorage["userdata-"+f.value] = f.text
+	                			optGroup.append('<option value="userdata-'+f.value+'">'+f.text+'</option>');
+	                			userSettings.append('<li id="userdata-'+f.value+'"><i class="fa fa-trash-o deleteUD" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
 	                		}
 	        		        $.isLoading( "hide" );
 	                	},
@@ -387,9 +447,15 @@
 				showCookieProtected();
 			
 	    		optGroup = $("#userData");
+	    		userSettings = $("#userSettings");
 	    		optGroup.empty();
+	    		userSettings.empty();
 	    		for (var i = 0; i < localStorage.length; i++){
-	    			optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
+	    			if (localStorage.key(i).match(/userdata-/g)){
+	    				console.log(localStorage.key(i))
+	    				optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
+	    				userSettings.append('<li id="'+localStorage.key(i)+'"><i class="fa fa-trash-o deleteUD" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+localStorage.getItem(localStorage.key(i))+'</li>');
+	    			}
 	    		}
 			}
 			

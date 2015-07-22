@@ -457,8 +457,13 @@ def _build_bigbed_query(tissue, chrom, segmin, segmax):
             with open(str(outFile.name)) as f:
                 for line in f:
                     parts = re.split(r'\t+', line.rstrip('\n'))
-                    bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3],
-                               'color': parts[8], 'sample': s})
+                    if len(parts) == 4:
+                        bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3], 'sample': s,
+                                   'desc': getattr(chicpea_settings, 'stateLookup').get(parts[3]).get('desc'),
+                                   'color': getattr(chicpea_settings, 'stateLookup').get(parts[3]).get('color')})
+                    else:
+                        bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3],
+                                   'color': parts[8], 'sample': s, 'desc': parts[3]})
                 bp = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], bp)
             bigbedData[s] = bp
     return bigbedData

@@ -1,7 +1,7 @@
 var diameter = $("#svg-container").width();
 var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
-var interactionScore = 5;
-var interactionColor = d3.scale.linear().domain([interactionScore, 20]).range(["blue", "red"]);
+var interactionScore = localStorage["interactionScore"];
+var interactionColor = d3.scale.linear().domain([0, 20]).range(["blue", "red"]);
 var start, CHR, totalBP, region;
 var pi = Math.PI;  
 var selecting = 0;
@@ -10,6 +10,10 @@ var angleOffset = 5,
 	arcAvail = 360 - (2 * angleOffset),
 	startAngle = (angleOffset * pi)/180,
 	endAngle = ((arcAvail + angleOffset) * pi) / 180;
+	
+var styleTooltip = function(name, description) {
+  return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
+};
     		
 function getQueryVariable(variable) {
 	var query = window.location.search.substring(1);
@@ -288,7 +292,7 @@ function renderHic(term, tissue, diameter, breadcrumb) {
 			.text("SNP Data: "+$('#gwas option:selected').text());
 		
 		
-		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
+//		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
 		
 		vis.append("g").attr("class", "left arrow_heads").selectAll("defs")
 			.data(Object.keys(bt))
@@ -592,7 +596,7 @@ function addExtraData(extras){
 function addGeneTrack(meta, genes, totalBP){
 	
 	var vis = d3.select("#main-svg");
-	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
+//	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
 	var maxscore = 0;
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	
@@ -601,15 +605,16 @@ function addGeneTrack(meta, genes, totalBP){
 	var gene = vis.append("g").attr("class", "track genes").selectAll("svg").data(genes).enter();
 	    
 	gene.append("path")
+		.attr("id", function (d) { return d.gene_id; })
 		.attr("d", function (d) {
 			return (computeStrandPath(d.start, d.end, innerRadius + (d.bumpLevel * 15), totalBP));
 		})
 		.attr("transform", trans)
 		.attr("class", function (d) {
 				if (d.gene_name == $("#search_term").val().toUpperCase() || d.gene_id == $("#search_term").val().toUpperCase()) {
-					return "hilight";
+					return "gene hilight";
 				} else {
-					return d.gene_biotype;
+					return "gene "+d.gene_biotype;
 				}
 		})
 		.attr("marker-start", function (d) {
@@ -634,7 +639,7 @@ function addGeneTrack(meta, genes, totalBP){
 				renderHic(term, tissue, diameter, 1);
 				return false;
 		})
-		.on("mouseover", function (d, i) {
+		/*.on("mouseover", function (d, i) {
 			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 			div.html(d.gene_name + "</br>" + d.gene_biotype + "</br>" + d.gene_id + "</br>" + numberWithCommas(parseInt(d.start) + start) + "</br>" + numberWithCommas(parseInt(d.end) + start))
 				.style("left", (d3.event.pageX) + "px")
@@ -645,7 +650,17 @@ function addGeneTrack(meta, genes, totalBP){
 		.on("mouseout", function (d) {
 				div.transition().duration(500).style("opacity", 0);
 				d3.select(this).style("opacity", 1);
-		});
+		});*/
+		
+		vis.selectAll("path.gene")
+			.attr("title", function(g) { return styleTooltip(g.gene_name, g.gene_biotype + "</br>" + g.gene_id + "</br>" + numberWithCommas(parseInt(g.start) + start) + "</br>" + numberWithCommas(parseInt(g.end) + start)) })
+			.each(function(g) {
+					var pos = {top: 0, left: 0, width:0, height:0};
+					$(this).on('mouseenter',function(e){
+							pos.top = e.pageY
+							pos.left = e.pageX
+					}).tipsy({ gravity: $.fn.tipsy.autoNSEW, opacity: 1, html: true, pos: pos }); });
+
 			
 /*		gene.append("text")
 	        .style("text-align", "left")
@@ -718,6 +733,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 		.attr("transform", function (d) {
 				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
 		})
+		.attr("class", "snp")
 		.attr("d", symb)
 //		.attr("stroke", function (d) {
 //				//if (parseFloat(d.score) == maxscore) return "red";
@@ -729,7 +745,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 				if (parseFloat(d.score) >= 7.03) return "green";
 				return "darkgrey";
 		})
-		.on("mouseover", function (d, i) {
+/*		.on("mouseover", function (d, i) {
 				div.transition().duration(200).style("opacity", 0.9);
 				div.html(d.name + "</br>P Value (-log10) = " + parseFloat(d.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(meta.rstart)) + "</br>")
 				.attr("class", "tooltip")
@@ -741,7 +757,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 		.on("mouseout", function (d) {
 				div.transition().duration(500).style("opacity", 0);
 				d3.select(this).style("opacity", 1);
-		})                                                          
+		})*/                                                     
 		.on("click", function (d) {
 				div.transition().duration(0).style("opacity", 0);
             	$("#search_term").val(d.name);
@@ -750,6 +766,10 @@ function addSNPTrackPoints(meta, snps, totalBP){
             	renderHic(term, tissue, diameter, 1);
             	return false;
 		})
+		
+		vis.selectAll("path.snp")
+			.attr("title", function(s) { return styleTooltip(s.name, "P Value (-log10) = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(meta.rstart))) })
+			.each(function(s) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
 		
 		return maxscore;
 }
@@ -770,7 +790,7 @@ function addInteractions(meta, hics, totalBP, tissues) {
 		.attr("class", function(d){
 				classes = "interaction";
 				for (var i=0;i<meta.tissues.length;i++) {
-					if (parseFloat(d[meta.tissues[i]]) >= interactionScore){
+					if (parseFloat(d[meta.tissues[i]]) >= localStorage["interactionScore"]){
 						classes += " "+meta.tissues[i];
 						tissues[meta.tissues[i]]++;
 					}
@@ -787,7 +807,7 @@ function addInteractions(meta, hics, totalBP, tissues) {
 		pathDetails(path);
 		
 		vis.selectAll("path.interaction").sort(function (a, b) {
-				if (parseFloat(a[tissue]) < interactionScore) return -1;
+				if (parseFloat(a[tissue]) < localStorage["interactionScore"]) return -1;
 				if (a[tissue] > b[tissue]) return 1;
 				if (b[tissue] > a[tissue]) return -1;
 				else return 0;
@@ -796,7 +816,7 @@ function addInteractions(meta, hics, totalBP, tissues) {
 
 function pathDetails(interactions){
 	var vis = d3.select("#main-svg");
-	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "100px");
+//	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "100px");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	
 	data = interactions.data();
@@ -804,7 +824,7 @@ function pathDetails(interactions){
 	//var totalBP = $("#totalBP").val();
 	
 	interactions.attr("stroke", function (d) {
-			if (parseFloat(d[tissue]) >= interactionScore){
+			if (parseFloat(d[tissue]) >= localStorage["interactionScore"]){
 				return interactionColor(d[tissue]);
 			}
 			else{
@@ -812,11 +832,11 @@ function pathDetails(interactions){
 			}
 	})
 	.on("mouseover", function (d, i) {
-			div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-			div.html("Score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
+			//div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
+			//div.html("Score " + parseFloat(d[tissue]).toFixed(2)).style("left", (d3.event.pageX) + "px").style("top", (d3.event.pageY - 28) + "px");
 			
 			vis.selectAll("path.interaction").sort(function (a, b) {
-					if (parseFloat(a[tissue]) < interactionScore) return -1;
+					if (parseFloat(a[tissue]) < localStorage["interactionScore"]) return -1;
 					if (a[tissue] > b[tissue]) return 1;
 					if (b[tissue] > a[tissue]) return -1;
 					else return 0;
@@ -853,12 +873,12 @@ function pathDetails(interactions){
 				.attr("fill", "none")
 	})
 	.on("mouseout", function (d, i) {
-			div.transition().duration(500).style("opacity", 0);
+			//div.transition().duration(500).style("opacity", 0);
 			d3.select(this).classed('hover', false);
 			vis.selectAll(".deleteMe").remove();			
 			
 			vis.selectAll("path.interaction").sort(function (a, b) {
-					if (parseFloat(a[tissue]) < interactionScore) return -1;
+					if (parseFloat(a[tissue]) < localStorage["interactionScore"]) return -1;
 					if (a[tissue] > b[tissue]) return 1;
 					if (b[tissue] > a[tissue]) return -1;
 					else return 0;
@@ -871,21 +891,31 @@ function pathDetails(interactions){
 	.on("click", function (d) {
 			resetVis();
             $(".deleteMe").attr('class', 'deleteClick');
+            d3.selectAll(".hicScore").classed('deleteClick', true);
             d3.select(this).classed('updateClick', true);
 			
-			$("#footer-bait").html('chr' + CHR + ':' + numberWithCommas(d.baitStart + start) + '..' + numberWithCommas(d.baitEnd + start) + " (" + ((d.baitEnd - d.baitStart) / 1000).toFixed(2) + "KB)");
-			$("#footer-target").html('chr' + CHR + ':' + numberWithCommas(d.oeStart + start) + '..' + numberWithCommas(d.oeEnd + start) + " (" + ((d.oeEnd - d.oeStart) / 1000).toFixed(2) + "KB)");
-				
-			drawRegionPanel("bait", CHR, (d.baitStart +start), (d.baitEnd + start), $("#maxScore").val());
-			drawRegionPanel("target", CHR, (d.oeStart + start), (d.oeEnd + start), $("#maxScore").val());
+			$("#footer-bait").html('chr' + CHR + ':' + numberWithCommas(d.baitStart_ori) + '..' + numberWithCommas(d.baitEnd_ori) + " (" + ((d.baitEnd_ori - d.baitStart_ori) / 1000).toFixed(2) + "KB)");
+			$("#footer-target").html('chr' + CHR + ':' + numberWithCommas(d.oeStart_ori) + '..' + numberWithCommas(d.oeEnd_ori) + " (" + ((d.oeEnd_ori - d.oeStart_ori) / 1000).toFixed(2) + "KB)");
+			
+			drawRegionPanel("bait", CHR, d.baitStart_ori, d.baitEnd_ori, $("#maxScore").val());
+			drawRegionPanel("target", CHR, d.oeStart_ori, d.oeEnd_ori, $("#maxScore").val());
 	});
 	
 	interactions.sort(function (a, b) {
-			if (parseFloat(a[tissue]) < interactionScore) return -1;
+			if (parseFloat(a[tissue]) < localStorage["interactionScore"]) return -1;
 			if (a[tissue] > b[tissue]) return 1;
 			if (b[tissue] > a[tissue]) return -1;                                                                 
 			else return 0;
 	});
+	
+	vis.selectAll("path.interaction")
+		.attr("title", function(hic) { return styleTooltip("Score " + parseFloat(hic[tissue]).toFixed(2), "") })
+		.each(function(hic) {
+			var pos = {top: 0, left: 0, width:0, height:0};
+			$(this).on('mouseenter',function(e){
+					pos.top = e.pageY
+					pos.left = e.pageX
+		}).tipsy({ gravity: $.fn.tipsy.autoNSEW, opacity: 1, html: true, pos: pos, offset: 5, className: 'hicScore' }); });
 }
 
 function drawRegionPanel(type, chr, start, end, maxscore) {	
@@ -899,7 +929,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 		tissue = $("input:radio[name=tissue]:checked").val()
 		borderColor = "red";
 		
-	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
+//	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
     var gwas = $("#gwas").val();
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
@@ -994,7 +1024,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("transform", function (d) {
 					return "translate(" + xRange(d.start + regionStart) + "," + yRangeS(d.score) + ")";
 				})
-				.on("mouseover", function (d, i) {
+				/*.on("mouseover", function (d, i) {
 						div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
 						div.html(d.name + "</br>" + d3.round(d.score, 3) + "</br>" + numberWithCommas(parseInt(d.start) + parseInt(regionStart)))
 							.style("left", (d3.event.pageX + 10) + "px")
@@ -1006,7 +1036,11 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 							.duration(500)
 							.style("opacity", 0);
 						d3.select(this).style("opacity", 1);
-				});
+				})*/;
+		
+			svgContainer.selectAll("path.marker")
+				.attr("title", function(s) { return styleTooltip('<a href="http://www.immunobase.org/page/Overview/display/marker/'+s.name+'" target="_blank">'+s.name+'</a>', "P Value (-log10) = " + d3.round(s.score, 3) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(regionStart))) })
+				.each(function(s) { $(this).tipsy({ gravity: $.fn.tipsy.autoWE, opacity: 1, html: true, delayOut: 2000 }); });
 				
 			// TRACK 2 - GENES
 			var yRangeG = d3.scale.linear().domain([0, trackHeight]).range([margin.top, margin.top + trackHeight]);
@@ -1143,7 +1177,9 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				
 				trackOffset += margin.top;
 				
-				var blueprint = blueprintTrack.append("g").attr("class", sample).selectAll(".blueprint")
+				var blueprint = blueprintTrack.append("g").attr("class", sample)
+				
+				var states = blueprint.selectAll(".blueprint")
 					.data(data.blueprint[sample])
 					.enter(); 
 				
@@ -1152,7 +1188,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					.enter(); //.append("g");
 					//.attr("class", "blueprint");*/
 				
-				blueprint.append("path")
+				states.append("path")
 					.attr("class", "line")
 					.attr("d", function (d) {
 							return line([ { x: d.start, y: trackOffset}, { x: d.end, y: trackOffset }]);
@@ -1161,7 +1197,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					.attr("stroke-width", "6px")
 					.on("mouseover", function (d, i) {
 							div.transition().duration(200).style("opacity", 0.9).attr("class", "tooltip");
-							div.html("<strong>"+d.sample+"</strong><br/>"+d.name)
+							div.html("<strong>"+d.desc+"</strong>")
 								.style("left", (d3.event.pageX + 10) + "px")
 								.style("top", (d3.event.pageY - 18) + "px");
 							d3.select(this).style("opacity", 0.3);
@@ -1172,6 +1208,13 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 								.style("opacity", 0);
 							d3.select(this).style("opacity", 1);
 					});
+					
+					blueprint.append("text")
+						.attr("x", 0)
+						.attr("y", trackOffset+10)
+						.attr("dy", ".35em")
+						.style("font-size", "0.9em")
+						.text(sample)
 			}
 			$("#panel-" + type).isLoading( "hide" ); 
 	});	
@@ -1179,6 +1222,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 
 function resetPage(term, tissue, breadcrumb) {
     d3.selectAll("svg").remove();
+    $(".tipsy").remove();
     resetVis();
     $("#search_term").val(term);
     $("#page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
@@ -1191,11 +1235,18 @@ function resetPage(term, tissue, breadcrumb) {
     if (breadcrumb) $("#breadcrumb").append('<li id="BC-' + termId + '"><a href="#" onclick=\'javascript:d3.selectAll("svg").remove(); $(document.getElementById("BC-'+termId+'")).remove();  renderHic("' + termId + '", $("input:radio[name=tissue]:checked").val(), '+diameter+', 1)\'>' + termText + '</a></li>');
 }
 
+function renderVis() {
+	resetVis();
+	var tissue = $("input:radio[name=tissue]:checked").val();
+	var term = $("#search_term").val();
+	renderHic(term, tissue, diameter, 0);
+}
+
 function resetVis() {
-	//$(".tooltip").hide();
-	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
+//	d3.select("div.tooltip").transition().duration(0).style("opacity", 0);
 	d3.select("#message").remove();	
 	d3.select("#svg-container").selectAll(".deleteClick").remove();
+	$(".deleteClick").remove();
 	d3.select("#svg-container").selectAll(".updateClick").classed('updateClick', false);
 	d3.select("#bait-svg").remove();
 	d3.select("#target-svg").remove();

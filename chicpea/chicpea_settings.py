@@ -26,6 +26,8 @@ CHICP_IDX = OrderedDict([
 
 sampleLookup = {}
 
+stateLookup = {}
+
 DEFAULT_TARGET = ''
 DEFAULT_TISSUE = ''
 DEFAULT_TRACK = ''
