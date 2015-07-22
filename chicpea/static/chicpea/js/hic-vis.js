@@ -107,8 +107,6 @@ function computeCartesian(r, coord, totalBP) {
             y: r * Math.cos(theta) * -1
         });
     }
-
-
 }
 
 
