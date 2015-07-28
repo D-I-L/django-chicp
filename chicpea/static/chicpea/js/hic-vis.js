@@ -734,7 +734,7 @@ function addSNPTrackPoints(meta, snps, totalBP){
 		})
 		
 		vis.selectAll("path.snp")
-			.attr("title", function(s) { return styleTooltip(s.name, "P Value (-log10) = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(meta.rstart))) })
+			.attr("title", function(s) { return styleTooltip(s.name, "P Value (-log10) = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(meta.ostart))) })
 			.each(function(s) { $(this).tipsy({ gravity: "w", opacity: 1, html: true, offset: 5, hoverlock: true }); });
 		
 		return maxscore;
@@ -1150,7 +1150,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 					.each(function(s) { $(this).tipsy({ gravity: 'n', opacity: 1, html: true, offset: 5, hoverlock: true }); });
 					
 				blueprint.append("text")
-					.attr("x", -20)
+					.attr("x", 0)
 					.attr("y", trackOffset+10)
 					.attr("dy", ".35em")
 					.style("font-size", "0.9em")
