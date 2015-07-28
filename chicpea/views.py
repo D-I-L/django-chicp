@@ -79,10 +79,12 @@ def chicpea(request):
 def chicpeaFileUpload(request, url):
     filesDict = request.FILES
     files = filesDict.getlist("files[]")
+    print(files)
     snpTracks = list()
     idx = getattr(chicpea_settings, 'CHICP_IDX').get('userdata').get('INDEX')
 
     for f in files:
+        print(f)
         line = f.readlines()[0].decode()
         if line.startswith("#"):
             line = f.readlines()[1].decode()
@@ -98,7 +100,8 @@ def chicpeaFileUpload(request, url):
         bedFile.close()
         idx_type = os.path.basename(bedFile.name)
         snpTracks.append({"value": idx_type, "text":  f.name})
-        os.system("curl -XDELETE '"+ElasticSettings.url()+"/cp:hg19_userdata_bed/"+idx_type+"'")
+        print("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'")
+        os.system("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'")
         call_command("index_search", indexName=idx, indexType=idx_type, indexBED=bedFile.name)
         logger.debug("--indexName "+idx+" --indexType "+idx_type+" --indexBED "+bedFile.name)
         bedFile.delete
@@ -106,7 +109,14 @@ def chicpeaFileUpload(request, url):
     context = dict()
     context['userSNPTracks'] = snpTracks
     return HttpResponse(json.dumps(context), content_type="application/json")
-    # return render(request, 'chicpea/index.html', context, content_type='text/html')
+
+
+def chicpeaDeleteUD(request, url):
+    queryDict = request.POST
+    idx_type = queryDict.get("userDataIdx")
+    idx = getattr(chicpea_settings, 'CHICP_IDX').get('userdata').get('INDEX')
+    output = subprocess.check_output("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'", shell=True)
+    return HttpResponse(output, content_type="application/json")
 
 
 def chicpeaSearch(request, url):
