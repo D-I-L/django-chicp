@@ -71,9 +71,9 @@ def chicpea(request):
     else:
         context['snp_track'] = defaultTrack
 
-    return render(request, 'chicpea/index3.html', context, content_type='text/html')
+    # return render(request, 'chicpea/index3.html', context, content_type='text/html')
     # return render(request, 'chicpea/index2.html', context, content_type='text/html')
-    # return render(request, 'chicpea/index.html', context, content_type='text/html')
+    return render(request, 'chicpea/index.html', context, content_type='text/html')
 
 
 def chicpeaFileUpload(request, url):
@@ -84,7 +84,6 @@ def chicpeaFileUpload(request, url):
     idx = getattr(chicpea_settings, 'CHICP_IDX').get('userdata').get('INDEX')
 
     for f in files:
-        print(f)
         line = f.readlines()[0].decode()
         if line.startswith("#"):
             line = f.readlines()[1].decode()
