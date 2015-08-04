@@ -12,13 +12,11 @@ from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.management import call_command
-from django.http.request import QueryDict
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
 
 from chicpea import chicpea_settings
 from chicpea import utils
-from chicpea.chicpea_settings import sampleLookup
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
 from elastic.search import Search, ElasticQuery
@@ -73,7 +71,9 @@ def chicpea(request):
     else:
         context['snp_track'] = defaultTrack
 
-    return render(request, 'chicpea/index.html', context, content_type='text/html')
+    return render(request, 'chicpea/index3.html', context, content_type='text/html')
+    # return render(request, 'chicpea/index2.html', context, content_type='text/html')
+    # return render(request, 'chicpea/index.html', context, content_type='text/html')
 
 
 def chicpeaFileUpload(request, url):
@@ -90,6 +90,9 @@ def chicpeaFileUpload(request, url):
             line = f.readlines()[1].decode()
 
         parts = re.split("\t", line)
+        if re.match("\s", line):
+            parts = re.split("\s", line)
+
         if len(parts) != 5:
             logger.warn("WARNING: unexpected number of columns: "+line)
             continue
@@ -100,7 +103,6 @@ def chicpeaFileUpload(request, url):
         bedFile.close()
         idx_type = os.path.basename(bedFile.name)
         snpTracks.append({"value": idx_type, "text":  f.name})
-        print("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'")
         os.system("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'")
         call_command("index_search", indexName=idx, indexType=idx_type, indexBED=bedFile.name)
         logger.debug("--indexName "+idx+" --indexType "+idx_type+" --indexBED "+bedFile.name)
@@ -124,7 +126,6 @@ def chicpeaSearch(request, url):
     targetIdx = queryDict.get("targetIdx")
     blueprint = {}
     hic = []
-    frags = []
     addList = []
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
@@ -138,6 +139,7 @@ def chicpeaSearch(request, url):
             searchTerm = ""
         mo = re.match(r"(.*):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
+        chrom = chrom.replace('chr', "")
     if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
         searchTerm = queryDict.get("searchTerm").lower()
         addList.append(_find_snp_position(queryDict.get("snp_track"), searchTerm))
@@ -179,7 +181,7 @@ def chicpeaSearch(request, url):
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
 
         if len(hic) == 0:
-            retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
+            retJSON = {'error': searchTerm+' does not overlap any bait/target regions in this dataset.'}
             return JsonResponse(retJSON)
 
     elif searchType == 'snp':
@@ -209,8 +211,8 @@ def chicpeaSearch(request, url):
         query_bool = BoolQuery()
         query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
         query_bool = _add_tissue_filter(query_bool, targetIdx)
-        query = ElasticQuery.filtered_bool(Query.query_string(searchTerm, fields=["name", "ensg"]), query_bool,
-                                           sources=utils.hicFields + utils.tissues[targetIdx])
+        query = ElasticQuery.filtered_bool(Query.query_string(searchTerm, fields=["name", "ensg", "oeName"]),
+                                           query_bool, sources=utils.hicFields + utils.tissues[targetIdx])
 
         hic, segmin, segmax = _build_hic_query(query, targetIdx)
 
@@ -227,7 +229,7 @@ def chicpeaSearch(request, url):
 
     # get genes based on this segment
     genes = _build_gene_query(chrom, segmin, segmax)
-    snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    (snps, snpMeta) = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
     frags = _build_frags_query(getattr(chicpea_settings, 'DEFAULT_FRAG'), chrom, segmin, segmax)
 
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
@@ -241,6 +243,7 @@ def chicpeaSearch(request, url):
                         "rchr": str(chrom),
                         "tissues": utils.tissues[targetIdx]},
                "snps": snps,
+               "snp_meta": snpMeta,
                "genes": genes,
                "region": str(chrom) + ":" + str(segmin) + "-" + str(segmax),
                "blueprint": blueprint,
@@ -260,7 +263,7 @@ def chicpeaSubSearch(request, url):
 
     genes = _build_gene_query(chrom, segmin, segmax)
     exons = _build_exon_query(chrom, segmin, segmax, genes)
-    snps = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    (snps, snpMeta) = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
     blueprint = {}
 
     if getattr(chicpea_settings, 'sampleLookup').get(tissue):
@@ -270,7 +273,8 @@ def chicpeaSubSearch(request, url):
                "region": str(chrom) + ":" + str(segmin) + "-" + str(segmax),
                "genes": genes,
                "exons": exons,
-               "snps": snps
+               "snps": snps,
+               "snp_meta": snpMeta
                }
     response = JsonResponse(retJSON)
     return response
@@ -279,10 +283,15 @@ def chicpeaSubSearch(request, url):
 def chicpeaDownload(request, url):
     queryDict = request.POST
     output_format = queryDict.get("output_format")
-    SVG = queryDict.get("data-main")
     CSS = queryDict.get("css-styles")
+    WIDTH = int(queryDict.get("svg-width")) + 40 + 50
+    HEIGHT = int(queryDict.get("svg-height")) + 60
     tissue = queryDict.get("tissue").replace(' ', '_')
     returnFileName = 'CHiCP-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
+
+    fig1 = fromstring(queryDict.get("data-main"))
+    layout = ColumnLayout(1)
+    layout.add_figure(fig1)
 
     if queryDict.get("data-bait") and queryDict.get("data-target"):
         s1 = queryDict.get("data-bait")
@@ -292,20 +301,20 @@ def chicpeaDownload(request, url):
         layoutPanels.add_figure(fromstring(s2))
         layoutPanels._generate_layout()
         svgPanels = layoutPanels.to_str()
+        fig2 = fromstring(svgPanels)
+    else:
+        fig2 = fromstring("<svg></svg>")
 
-        fig1 = fromstring(queryDict.get("data-main"))
-        layout = ColumnLayout(1)
-        layout.add_figure(fig1)
-        layout.add_figure(fromstring(svgPanels))
-        layout._generate_layout()
-        SVG = layout.to_str().decode()
-        p = re.compile(r'translate\((\d+), 0\)')
-        m = p.search(SVG)
-        SVG = re.sub(r'translate\(\d+, 0\)', r'translate('+str(int(m.group(1)) + 40)+', 50)', SVG)
-        SVG = SVG.replace('translate(0, 270)', 'translate(0, 390)')
+    layout.add_figure(fig2)
+    layout._generate_layout()
+    SVG = layout.to_str().decode()
+    p = re.compile(r'translate\((\d+), 0\)')
+    m = p.search(SVG)
+    SVG = re.sub(r'translate\(\d+, 0\)', r'translate('+str(int(m.group(1)) + 60)+', 50)', SVG)
+    SVG = SVG.replace('translate(0, 270)', 'translate(0, 390)')
 
     SVG = SVG.replace('<g>', '<g transform="translate(20,30) scale(1)">', 1)
-    SVG = SVG.replace('<svg ', '<svg style="width:1600px;height:800px;" ')
+    SVG = SVG.replace('<svg ', '<svg style="width:'+str(WIDTH)+'px;height:'+str(HEIGHT)+'px;" ')
     SVG = SVG.replace("</svg>", '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
     if output_format == "svg":
@@ -418,6 +427,8 @@ def _find_snp_position(snp_track, name):
 
 def _build_snp_query(snp_track, chrom, segmin, segmax):
     snps = []
+    snpMeta = {}
+    maxScore = -1
     if snp_track and snp_track != 'None':
         # get SNPs based on this segment
         mo = re.match(r"(.*)-(.*)", snp_track)
@@ -438,7 +449,20 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
         snpResult = snpQuery.get_result()
         snps = snpResult['data']
         snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
-    return snps
+
+        data_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('DATA_TYPE')
+        snpSettings = getattr(chicpea_settings, 'STUDY_DEFAULTS').get(data_type)
+        if 'max' in snpSettings:
+            maxScore = float(snpSettings['max'])
+        else:
+            for s in snps:
+                if float(s['score']) > maxScore:
+                    maxScore = float(s['score'])
+            snpSettings['max'] = maxScore
+
+        snpMeta = snpSettings
+
+    return snps, snpMeta
 
 
 def _build_frags_query(frags_idx, chrom, segmin, segmax):
