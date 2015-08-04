@@ -38,7 +38,7 @@ body {
 		top: 50px;
 		bottom: 0;
 		left: 0;
-		z-index: 1000;
+		/*z-index: 1000;*/
 		display: block;
 		padding: 20px;
 		overflow-x: hidden;
@@ -74,15 +74,16 @@ body {
 	padding: 20px;
 }
 
-@media ( min-width : 768px) {
-	.main {
-		padding-right: 40px;
-		padding-left: 40px;
-	}
-}
-
 .main .page-header {
 	margin-top: 0;
+}
+
+.main .exportButtons {
+	float:right;
+}
+
+.canvas-slid .main .exportButtons {
+	margin-right:280px;
 }
 
 /*
@@ -154,6 +155,9 @@ body {
 }
 
 /* css for svg images */
+div#svg-container{
+	text-align:center;
+}
 div.svg-tooltip {
 	position: absolute;
 	text-align: center;
@@ -176,6 +180,52 @@ div.svg-tooltip {
     	width:100%;
     }
 }
+
+/*------------------------*/
+/* CSS for sidebar reveal */
+/*------------------------*/
+html, body {
+  height: 100%;
+}
+
+.navbar-toggle {
+  float: left;
+  margin-left: 15px;
+}
+
+.navmenu {
+  z-index: 1;
+}
+
+.canvas {
+  position: relative;
+  left: 0;
+  z-index: 2;
+  min-height: 100%;
+  padding: 50px 0 0 0;
+  background: #fff;
+}
+
+@media (min-width: 0) {
+  .navbar-toggle {
+    display: block; /* force showing the toggle */
+  }
+}
+
+@media (min-width: 992px) {
+  body {
+    padding: 0;
+  }
+}
+
+
+
+
+
+/*-------------*/
+/* CSS for SVG */
+/*-------------*/
+
 .svg_only { display:none; }
 svg { font: 12px sans-serif; }
 svg .panel-seq { font-size: 10px; }
