@@ -36,15 +36,16 @@
 		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 		<![endif]-->
 
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.13/d3.min.js"></script>
-<script type="text/javascript" src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+<!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.4.13/d3.min.js"></script> -->
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
 </head>
 
 <body>
 	<nav class="navbar navbar-inverse navbar-fixed-top">
 		<div class="container-fluid">
 			<div class="navbar-header">
-				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+				<button style="display:block;float:left;" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar" aria-expanded="false" aria-controls="sidebar">
 					<span class="sr-only">Toggle navigation</span>
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
@@ -52,7 +53,7 @@
 				</button>
 				<a class="navbar-brand" href="/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
 			</div>
-			<div id="navbar" class="navbar-collapse collapse">
+			<div id="navbar">
 				<ul class="nav navbar-nav navbar-right">
 					<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
 				</ul>
@@ -207,6 +208,8 @@
 		<input type="hidden" id="data-main" name="data-main" value="">
 		<input type="hidden" id="data-bait" name="data-bait" value="">
 		<input type="hidden" id="data-target" name="data-target" value="">
+		<input type="hidden" id="svg-width" name="svg-width" value="">
+		<input type="hidden" id="svg-height" name="svg-height" value="">
 		<input type="hidden" id="searchTerm" name="searchTerm" value="">
 		<input type="hidden" id="tissue" name="tissue" value="">
 		<input type="hidden" id="snp_track" name="snp_track" value="">
@@ -253,12 +256,16 @@
 		function submit_download_form(output_format) {
 			baitSVG = "";
 			targetSVG = "";
+			svgWidth = $("#main-svg").width()
+			svgHeight = $("#main-svg").height()
 
 			if ($("svg").length == 3) {
-				baitSVG = (new XMLSerializer)
-						.serializeToString($("#bait-svg")[0]);
-				targetSVG = (new XMLSerializer)
-						.serializeToString($("#target-svg")[0]);
+				baitSVG = (new XMLSerializer).serializeToString($("#bait-svg")[0]);
+				targetSVG = (new XMLSerializer).serializeToString($("#target-svg")[0]);
+				svgWidth += $("#bait-svg").width();
+				svgHeight2 = $("#bait-svg").height() + $("#target-svg").height()
+				if (svgHeight2 > svgHeight)
+					svgHeight = svgHeight2
 			}
 
 			// Submit the <FORM> to the server.
@@ -267,6 +274,8 @@
 			$("#data-main").val((new XMLSerializer).serializeToString($("#main-svg")[0]));
 			$("#data-bait").val(baitSVG);
 			$("#data-target").val(targetSVG);
+			$("#svg-width").val(svgWidth);
+			$("#svg-height").val(svgHeight);
 			$("#searchTerm").val($("#search_term").val());
 			$("#tissue").val($("input:radio[name=tissue]:checked").val());
 			$("#snp_track").val($("#gwas").val());
@@ -286,8 +295,8 @@
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
 		        var totalBP = data.meta.rend - data.meta.rstart;
-				addSNPTrack(data.snps);
-		        $("#maxScore").val(addSNPTrackPoints(data.meta, data.snps, totalBP));
+				addSNPTrack(data.snps, data.snp_meta);
+		        addSNPTrackPoints(data.meta, data.snps, data.snp_meta, totalBP);
 		        $.isLoading( "hide" );
 			});
 		}
@@ -339,6 +348,8 @@
 		$(document).ready(function() {
 		
 			localStorage["interactionScore"] = localStorage["interactionScore"] || 5;
+
+			var interactionScore = localStorage["interactionScore"];
 			
 			// Interaction Score Slider
 			$("#scoreSliderVal").text(localStorage["interactionScore"])
