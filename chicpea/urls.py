@@ -7,4 +7,5 @@ urlpatterns = patterns('',
                        url(r'^subSearch(.*)$', views.chicpeaSubSearch, name='chicpeaSubSearch'),
                        url(r'^fileUpload(.*)$', views.chicpeaFileUpload, name='chicpeaFileUpload'),
                        url(r'^download(.*)$', views.chicpeaDownload, name='chicpeaDownload'),
+                       url(r'^deleteUserData(.*)$', views.chicpeaDeleteUD, name='chicpeaDeleteUD'),
                        )

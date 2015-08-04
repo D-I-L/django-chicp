@@ -12,6 +12,7 @@
 <title>Capture HiC Plotter</title>
 
 <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="http://www.jasny.net/bootstrap/dist/css/jasny-bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
 <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 
@@ -42,125 +43,126 @@
 </head>
 
 <body>
+	<div class="navmenu navmenu-default navmenu-fixed-left sidebar no-print">
+		<ul class="nav navmenu-nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
+			<input type="hidden" id="regionSearch" value="{{ region }}">
+			<div class="form-group">
+				<input type="text" class="form-control" placeholder="Search Term"
+					id="search_term" value="{{ searchTerm }}">
+				<button type="submit" class="btn btn-default" id="pushme">Submit</button>
+			</div>
+			<div class="panel panel-default" style="margin-top: 20px">
+				<div class="panel-heading">Promoter Capture Datasets</div>
+				<div class="panel-body">
+					<div class="form-group" style="width:100%">
+						<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
+				{% for idx in allIndexes %}
+							<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
+				{% endfor %}
+						</select>
+					</div>
+					<div class="form-group" style="padding-top:10px;">
+			{% for t in allTissues %}
+						<div class="radio tissue {{ t.class }}" style="display: none">
+							<label><input type="radio" name="tissue" value="{{ t.value }}"
+							{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
+							>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
+						</div>
+			{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
+				<div class="panel-heading">Association Studies</div>
+				<div class="panel-body">
+					<div class="form-group">
+						<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
+						{% for group, tracks in snpTracks.items %}
+						{% if group == 'User Data' %}
+							<optgroup id="userData" label="{{ group }}">
+						{% else %}
+							<optgroup label="{{ group }}">
+						{% endif %}
+							{% for t in tracks %}
+								<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+							{% endfor %}
+							</optgroup>
+						{% endfor %}
+						</select>
+					</div>
+					<div class="strike"><span>OR</span></div>
+					<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
+						{% csrf_token %}
+						<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
+					</form>
+				</div>
+			</div>
+		</ul>
+	</div>
+	
+	
 	<nav class="navbar navbar-inverse navbar-fixed-top">
 		<div class="container-fluid">
-			<div class="navbar-header">
-				<button style="display:none;float:left;" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar" aria-expanded="false" aria-controls="sidebar">
+			<div class="navbar-header" style="margin-left:-15px;">
+				<button type="button" class="navbar-toggle" data-toggle="offcanvas"
+					data-recalc="false" data-target=".navmenu" data-canvas=".canvas">
 					<span class="sr-only">Toggle navigation</span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
-						<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>	
 				</button>
 				<a class="navbar-brand" href="/"><span class="chicp_name">C</span>apture <span class="chicp_name">HiC</span> <span class="chicp_name">P</span>lotter (CHiCP)</a>
 			</div>
-			<div id="navbar">
-				<ul class="nav navbar-nav navbar-right">
-					<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
-				</ul>
-			</div><!--/.nav-collapse -->
+			<ul class="nav navbar-nav navbar-right">
+				<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
+			</ul>
 		</div><!--/.container-fluid -->
 	</nav>
 
-	<div class="container-fluid" style="padding-top:50px;">
-		<div class="row">
-			<div class="col-sm-3 col-md-2 sidebar no-print">
-				<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
-					<!-- <form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">-->
-					<input type="hidden" id="regionSearch" value="{{ region }}">
-					<div class="form-group">
-						<input type="text" class="form-control" placeholder="Search Term"
-							id="search_term" value="{{ searchTerm }}">
-						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
-					</div>
-					<div class="panel panel-default" style="margin-top: 20px">
-						<div class="panel-heading">Promoter Capture Datasets</div>
-						<div class="panel-body">
-							<div class="form-group" style="width:100%">
-								<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
-						{% for idx in allIndexes %}
-									<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
-						{% endfor %}
-								</select>
-							</div>
-							<div class="form-group" style="padding-top:10px;">
-					{% for t in allTissues %}
-								<div class="radio tissue {{ t.class }}" style="display: none">
-									<label><input type="radio" name="tissue" value="{{ t.value }}"
-									{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
-									>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
-								</div>
-					{% endfor %}
-							</div>
+	<div class="canvas">
+		<div class="container-fluid">
+			<div class="row">
+				<div class="main">
+					<span class="exportButtons no-print">
+						<button class="btn btn-primary" id="save_as_svg" value="">
+							<i class="fa fa-floppy-o"></i>&nbsp;SVG
+						</button>
+						<button class="btn btn-primary" id="save_as_pdf" value="">
+							<i class="fa fa-floppy-o"></i>&nbsp;PDF
+						</button>
+						<button class="btn btn-primary" id="save_as_png" value="">
+							<i class="fa fa-floppy-o"></i>&nbsp;PNG
+						</button>
+					</span>
+					<h1 class="page-header" id="page_header"></h1>
+					<ol class="breadcrumb no-print" id="breadcrumb">
+						<li><a href="/chicpea/">Start</a></li>
+					</ol>
+					<div class="row svg-row">
+						<div class="col-md-6">
+							<div id="svg-container"></div>
 						</div>
-					</div>
-					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
-						<div class="panel-heading">Association Studies</div>
-						<div class="panel-body">
-							<div class="form-group">
-								<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
-								{% for group, tracks in snpTracks.items %}
-								{% if group == 'User Data' %}
-									<optgroup id="userData" label="{{ group }}">
-								{% else %}
-									<optgroup label="{{ group }}">
-								{% endif %}
-									{% for t in tracks %}
-										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
-									{% endfor %}
-									</optgroup>
-								{% endfor %}
-								</select>
-							</div>
-							<div class="strike"><span>OR</span></div>
-							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
-								{% csrf_token %}
-								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
-							</form>
-						</div>
-					</div>
-				</ul>
-			</div>
-
-			<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-				<span style="float: right" class="no-print">
-					<button class="btn btn-primary" id="save_as_svg" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;SVG
-					</button>
-					<button class="btn btn-primary" id="save_as_pdf" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;PDF
-					</button>
-					<button class="btn btn-primary" id="save_as_png" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;PNG
-					</button>
-				</span>
-				<h1 class="page-header" id="page_header"></h1>
-				<ol class="breadcrumb no-print" id="breadcrumb">
-					<li><a href="/chicpea/">Start</a></li>
-				</ol>
-				<div class="row svg-row">
-					<div class="col-sm-6">
-						<div id="svg-container"></div>
-					</div>
-					<div class="col-sm-6">
-						<div class="row">
-							<div class="col-sm-12">
-								<div class="panel panel-info">
-									<div class="panel-heading">
-									<span id="footer-bait" style="font-size:0.9em; font-style:italic; float:right">&nbsp;</span>
-										<h3 class="panel-title">Bait</h3>
+						<div class="col-md-6">
+							<div class="row">
+								<div class="col-sm-12">
+									<div class="panel panel-info">
+										<div class="panel-heading">
+										<span id="footer-bait" style="font-size:0.9em; font-style:italic; float:right">&nbsp;</span>
+											<h3 class="panel-title">Bait</h3>
+										</div>
+										<div style="height: 300px;" class="panel-body panel-seq" id="panel-bait"></div>
 									</div>
-									<div style="height: 300px;" class="panel-body panel-seq" id="panel-bait"></div>
 								</div>
 							</div>
-						</div>
-						<div class="row">
-							<div class="col-sm-12">
-								<div class="panel panel-danger">
-									<div class="panel-heading">
-										<span id="footer-target" style="font-size: 0.9em; font-style: italic; float:right">&nbsp;</span>
-										<h3 class="panel-title">Target</h3>
+							<div class="row">
+								<div class="col-sm-12">
+									<div class="panel panel-danger">
+										<div class="panel-heading">
+											<span id="footer-target" style="font-size: 0.9em; font-style: italic; float:right">&nbsp;</span>
+											<h3 class="panel-title">Target</h3>
+										</div>
+										<div style="height: 300px;" class="panel-body panel-seq" id="panel-target"></div>
 									</div>
-									<div style="height: 300px;" class="panel-body panel-seq" id="panel-target"></div>
 								</div>
 							</div>
 						</div>
@@ -222,6 +224,7 @@
 	<!-- Bootstrap core JavaScript
 		================================================== -->
 	<!-- Placed at the end of the document so the pages load faster -->
+	<script type="text/javascript" src="http://www.jasny.net/bootstrap/dist/js/jasny-bootstrap.min.js"></script>
 	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/tipsy.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>

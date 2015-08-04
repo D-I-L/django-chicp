@@ -19,6 +19,7 @@
 <link href="{% static "chicpea/css/bootstrap.fd.css" %}" rel="stylesheet">
 <link href="{% static "chicpea/css/jquery.cookiebar.css" %}" rel="stylesheet">
 <link href="{% static "chicpea/css/tipsy.css" %}" rel="stylesheet">
+<link href="{% static "chicpea/css/simple-sidebar.css" %}" rel="stylesheet">
 
 <!-- Custom styles for this template -->
 <link href="{% static "chicpea/css/extra.css" %}" rel="stylesheet">
@@ -45,7 +46,8 @@
 	<nav class="navbar navbar-inverse navbar-fixed-top">
 		<div class="container-fluid">
 			<div class="navbar-header">
-				<button style="display:none;float:left;" type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar" aria-expanded="false" aria-controls="sidebar">
+				<button id="menu-toggle" type="button" class="navbar-toggle collapsed" style="display:block;float:left">
+				<!-- <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#sidebar" aria-expanded="false" aria-controls="sidebar"> -->
 					<span class="sr-only">Toggle navigation</span>
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
@@ -60,68 +62,71 @@
 			</div><!--/.nav-collapse -->
 		</div><!--/.container-fluid -->
 	</nav>
-
-	<div class="container-fluid" style="padding-top:50px;">
-		<div class="row">
-			<div class="col-sm-3 col-md-2 sidebar no-print">
-				<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
-					<!-- <form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">-->
-					<input type="hidden" id="regionSearch" value="{{ region }}">
-					<div class="form-group">
-						<input type="text" class="form-control" placeholder="Search Term"
-							id="search_term" value="{{ searchTerm }}">
-						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
-					</div>
-					<div class="panel panel-default" style="margin-top: 20px">
-						<div class="panel-heading">Promoter Capture Datasets</div>
-						<div class="panel-body">
-							<div class="form-group" style="width:100%">
-								<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
-						{% for idx in allIndexes %}
-									<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
-						{% endfor %}
-								</select>
-							</div>
-							<div class="form-group" style="padding-top:10px;">
-					{% for t in allTissues %}
-								<div class="radio tissue {{ t.class }}" style="display: none">
-									<label><input type="radio" name="tissue" value="{{ t.value }}"
-									{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
-									>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
-								</div>
-					{% endfor %}
-							</div>
-						</div>
-					</div>
-					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
-						<div class="panel-heading">Association Studies</div>
-						<div class="panel-body">
-							<div class="form-group">
-								<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
-								{% for group, tracks in snpTracks.items %}
-								{% if group == 'User Data' %}
-									<optgroup id="userData" label="{{ group }}">
-								{% else %}
-									<optgroup label="{{ group }}">
-								{% endif %}
-									{% for t in tracks %}
-										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
-									{% endfor %}
-									</optgroup>
-								{% endfor %}
-								</select>
-							</div>
-							<div class="strike"><span>OR</span></div>
-							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
-								{% csrf_token %}
-								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
-							</form>
-						</div>
-					</div>
-				</ul>
+	
+    <div id="wrapper">
+        <div id="sidebar-wrapper" class="no-print sidebar">
+	<!-- div id="sidebar" class="col-sm-3 col-md-2 sidebar no-print"> -->
+		<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
+			<!-- <form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">-->
+			<input type="hidden" id="regionSearch" value="{{ region }}">
+			<div class="form-group">
+				<input type="text" class="form-control" placeholder="Search Term"
+					id="search_term" value="{{ searchTerm }}">
+				<button type="submit" class="btn btn-default" id="pushme">Submit</button>
 			</div>
+			<div class="panel panel-default" style="margin-top: 20px">
+				<div class="panel-heading">Promoter Capture Datasets</div>
+				<div class="panel-body">
+					<div class="form-group" style="width:100%">
+						<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
+				{% for idx in allIndexes %}
+							<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
+				{% endfor %}
+						</select>
+					</div>
+					<div class="form-group" style="padding-top:10px;">
+			{% for t in allTissues %}
+						<div class="radio tissue {{ t.class }}" style="display: none">
+							<label><input type="radio" name="tissue" value="{{ t.value }}"
+							{% if t.value ==  tissue or t.value ==  default_tissue %} checked="checked"{% endif %}
+							>&nbsp;{{ t.text }}&nbsp;<span id="{{ t.value }}_count">(0)</span></label>
+						</div>
+			{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
+				<div class="panel-heading">Association Studies</div>
+				<div class="panel-body">
+					<div class="form-group">
+						<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
+						{% for group, tracks in snpTracks.items %}
+						{% if group == 'User Data' %}
+							<optgroup id="userData" label="{{ group }}">
+						{% else %}
+							<optgroup label="{{ group }}">
+						{% endif %}
+							{% for t in tracks %}
+								<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+							{% endfor %}
+							</optgroup>
+						{% endfor %}
+						</select>
+					</div>
+					<div class="strike"><span>OR</span></div>
+					<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
+						{% csrf_token %}
+						<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
+					</form>
+				</div>
+			</div>
+		</ul>
+	</div>
 
-			<div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+	<div id="page-content-wrapper">
+	<div class="container-fluid">
+		<div class="row">
+			<div id="main" class="main">
 				<span style="float: right" class="no-print">
 					<button class="btn btn-primary" id="save_as_svg" value="">
 						<i class="fa fa-floppy-o"></i>&nbsp;SVG
@@ -169,6 +174,7 @@
 			</div>
 		</div>
 	</div>
+	</div>
 	
 	<!-- line modal -->
 	<div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="modalLabel" aria-hidden="true">
@@ -208,8 +214,6 @@
 		<input type="hidden" id="data-main" name="data-main" value="">
 		<input type="hidden" id="data-bait" name="data-bait" value="">
 		<input type="hidden" id="data-target" name="data-target" value="">
-		<input type="hidden" id="svg-width" name="svg-width" value="">
-		<input type="hidden" id="svg-height" name="svg-height" value="">
 		<input type="hidden" id="searchTerm" name="searchTerm" value="">
 		<input type="hidden" id="tissue" name="tissue" value="">
 		<input type="hidden" id="snp_track" name="snp_track" value="">
@@ -223,6 +227,7 @@
 		================================================== -->
 	<!-- Placed at the end of the document so the pages load faster -->
 	<script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="{% static "chicpea/js/simple-sidebar.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/tipsy.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
 	<script type="text/javascript" src="{% static "chicpea/js/bootstrap.fd.js" %}"></script>
@@ -256,16 +261,12 @@
 		function submit_download_form(output_format) {
 			baitSVG = "";
 			targetSVG = "";
-			svgWidth = $("#main-svg").width()
-			svgHeight = $("#main-svg").height()
 
 			if ($("svg").length == 3) {
-				baitSVG = (new XMLSerializer).serializeToString($("#bait-svg")[0]);
-				targetSVG = (new XMLSerializer).serializeToString($("#target-svg")[0]);
-				svgWidth += $("#bait-svg").width();
-				svgHeight2 = $("#bait-svg").height() + $("#target-svg").height()
-				if (svgHeight2 > svgHeight)
-					svgHeight = svgHeight2
+				baitSVG = (new XMLSerializer)
+						.serializeToString($("#bait-svg")[0]);
+				targetSVG = (new XMLSerializer)
+						.serializeToString($("#target-svg")[0]);
 			}
 
 			// Submit the <FORM> to the server.
@@ -274,8 +275,6 @@
 			$("#data-main").val((new XMLSerializer).serializeToString($("#main-svg")[0]));
 			$("#data-bait").val(baitSVG);
 			$("#data-target").val(targetSVG);
-			$("#svg-width").val(svgWidth);
-			$("#svg-height").val(svgHeight);
 			$("#searchTerm").val($("#search_term").val());
 			$("#tissue").val($("input:radio[name=tissue]:checked").val());
 			$("#snp_track").val($("#gwas").val());
@@ -295,8 +294,8 @@
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
 		        var totalBP = data.meta.rend - data.meta.rstart;
-				addSNPTrack(data.snps, data.snp_meta);
-		        addSNPTrackPoints(data.meta, data.snps, data.snp_meta, totalBP);
+				addSNPTrack(data.snps);
+		        $("#maxScore").val(addSNPTrackPoints(data.meta, data.snps, totalBP));
 		        $.isLoading( "hide" );
 			});
 		}
@@ -348,8 +347,6 @@
 		$(document).ready(function() {
 		
 			localStorage["interactionScore"] = localStorage["interactionScore"] || 5;
-
-			var interactionScore = localStorage["interactionScore"];
 			
 			// Interaction Score Slider
 			$("#scoreSliderVal").text(localStorage["interactionScore"])

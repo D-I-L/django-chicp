@@ -23,6 +23,9 @@ $.FileDialog = function FileDialog(userOptions) {
             "                </h4>",
             "            </div>",
             "            <div class='modal-body'>",
+            "			     <div class='well well-sm' style='font-size:0.9em'>Files to be uploaded will replace the SNP scatter plot track and appear as user data in the Association Statistics list above.<br />",
+			"					Files should be in <ahref='https://genome.ucsc.edu/FAQ/FAQformat.html#format1' target='_blank'>BED5 format</a> (GRCh37).  Maximum file size is 2MB.<br />",
+			"					By uploading your own dataset you agree for your data to be held on our server(s).</div>",
             "                <input type='file' />",
             "                <div class='bfd-dropfield'>",
             "                    <div class='bfd-dropfield-inner'>",
@@ -220,6 +223,7 @@ $.FileDialog.defaults = {
     "readAs": "DataURL", /* possible choices: BinaryString, Text, DataURL, ArrayBuffer, */
     "removeMessage": "Remove&nbsp;file",
     "title": "Load file(s)",
+    "note": "",
     "max_size": 5000000    /* 5 MB */
 };
 
