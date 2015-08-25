@@ -7,14 +7,17 @@ Chicpea is a Django app to visualise HiC interactions.
 Quick start
 -----------
 
-1. Installation
+1. Pre-Installation Requirements
+	Cairo - http://cairographics.org
+
+2. Installation
 ```bash
 	pip install -e git://github.com/D-I-L/django-chicpea.git#egg=chicpea
 	pip install --exists-action w -r $PYENV_HOME/src/chicpea/chicpea/requirements.txt 
 	sed -i 's|from transform import|from svgutils.transform import|' $PYENV_HOME/src/svgutils/src/svgutils/templates.py
 ```
 
-2. Add "chicpea" (and analytical for google analytics) to your INSTALLED_APPS setting like this::
+3. Add "chicpea" (and analytical for google analytics) to your INSTALLED_APPS setting like this::
 ```python
     INSTALLED_APPS = (
         ...
@@ -27,7 +30,7 @@ Quick start
 	url(r'^chicpea/', include('chicpea.urls', namespace="chicpea")),
 ```
 
-4. Create a settings_secret.py in your django project and include it from settings.py.  Add details for ELASTIC search functionality like this::
+5. Create a settings_secret.py in your django project and include it from settings.py.  Add details for ELASTIC search functionality like this::
 ```python
 	# elastic search engine
 	ELASTIC = {
@@ -39,4 +42,4 @@ Quick start
 	}
 ```
 
-5. Setup elastic indexes for all your data in chicpea_settings.py
+6. Setup elastic indexes for all your data in chicpea_settings.py
