@@ -129,6 +129,8 @@ def chicpeaSearch(request, url):
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
 
+    logger.warn("### "+searchType+" - "+searchTerm+' ###')
+
     if queryDict.get("region") or re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")):
         searchType = 'region'
         region = queryDict.get("searchTerm")
@@ -147,8 +149,6 @@ def chicpeaSearch(request, url):
         position = addList[0]['end']
         if searchType != 'region':
             searchType = 'snp'
-
-    logger.warn("### "+searchType+" - "+searchTerm+' ###')
 
     if searchType == 'region':
         query_bool = BoolQuery()
@@ -178,9 +178,10 @@ def chicpeaSearch(request, url):
 
         query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
+        # print(hic)
 
         if len(hic) == 0:
-            retJSON = {'error': searchTerm+' does not overlap any bait/target regions in this dataset.'}
+            retJSON = {'error': queryDict.get("searchTerm")+' does not overlap any bait/target regions in this dataset.'}
             return JsonResponse(retJSON)
 
     elif searchType == 'snp':
@@ -451,13 +452,13 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
 
         data_type = getattr(chicpea_settings, 'CHICP_IDX').get(group).get('DATA_TYPE')
         snpSettings = getattr(chicpea_settings, 'STUDY_DEFAULTS').get(data_type)
-        if 'max' in snpSettings:
-            maxScore = float(snpSettings['max'])
-        else:
-            for s in snps:
-                if float(s['score']) > maxScore:
-                    maxScore = float(s['score'])
-            snpSettings['max'] = maxScore
+#        if 'max' in snpSettings:
+#            maxScore = float(snpSettings['max'])
+#        else:
+        for s in snps:
+            if float(s['score']) > maxScore:
+                maxScore = float(s['score'])
+        snpSettings['max'] = maxScore
 
         snpMeta = snpSettings
 
