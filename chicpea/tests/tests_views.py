@@ -62,9 +62,8 @@ class ChicpeaTestCase(TestCase):
     def test_chicpeasearch_gene(self):
         ''' Test chicpea search for a gene & tissue '''
         geneName = 'IL2RA'
-        tissue = 'Monocytes'
-        targetIdx = 'cp:hg19_chicago_targets'
-        url = "/chicpea/search?searchTerm="+geneName+"&targetIdx="+targetIdx+"&tissue="+tissue+"&snp_track=gwas-barrett"
+        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        url = "/chicpea/search?searchTerm="+geneName+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
         request = self.factory.get(url)
         response = chicpeaSearch(request, url)
         self._HICtest(str(response.content, encoding='utf8'))
@@ -81,9 +80,8 @@ class ChicpeaTestCase(TestCase):
     def test_chicpeasearch_snp(self):
         ''' Test chicpea search for a gene & tissue '''
         snp = 'rs2476601'
-        tissue = 'Erythroblasts'
-        targetIdx = 'cp:hg19_chicago_targets'
-        url = "/chicpea/search?searchTerm="+snp+"&targetIdx="+targetIdx+"&tissue="+tissue+"&snp_track=gwas-barrett"
+        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        url = "/chicpea/search?searchTerm="+snp+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
         request = self.factory.get(url)
         response = chicpeaSearch(request, url)
         self._HICtest(str(response.content, encoding='utf8'))
