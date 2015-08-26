@@ -12,7 +12,7 @@ CHICP_IDX = OrderedDict([
                          ])
             }
      ),
-    ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'idx_name', 'TRACKS':
+    ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'cp:hg19_gwas_bed', 'TRACKS':
               OrderedDict([
                            ('gwas-barrett', {'NAME': 'T1D - Barrett et al.', 'TYPE': 't1d_barrett'}),
                          ])
@@ -36,3 +36,6 @@ DEFAULT_FRAG = 'hg19_restriction_sites/hindiii'
 CP_GENE_IDX = 'cp:hg19_gene_details'
 
 TARGET_IDXS = {'cp:hg19_mifsud_gt_pm': 'Mifsud'}
+
+STUDY_DEFAULTS = {'log10p': {'min': 1, 'snpCutoff': 7.03, 'score_text': "P Value (-log10)"},
+                  'ppi': {'min': 0.001, 'snpCutoff': 0.1, 'score_text': "PPI Score"}}
