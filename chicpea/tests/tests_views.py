@@ -53,8 +53,6 @@ class ChicpeaTestCase(TestCase):
         response = self.client.get(reverse('chicpea:chicpea') + '?term='+geneName)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
-        # str_error = 'Gene name '+geneName+' not found in this dataset'
-        # self.assertIn(str_error.encode('ascii'), response.content)
 
     def test_search(self):
         ''' Test the chicpea search. '''
