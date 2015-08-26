@@ -2,6 +2,8 @@ from django.core.urlresolvers import resolve, reverse
 from django.test import TestCase
 from django.test.client import RequestFactory
 
+from chicpea import chicpea_settings
+from chicpea import utils
 from chicpea.views import chicpea, chicpeaSearch
 from elastic.search import Search
 
@@ -10,6 +12,10 @@ class ChicpeaTestCase(TestCase):
     def setUp(self):
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
+        for idx in getattr(chicpea_settings, 'TARGET_IDXS'):
+            elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
+            tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
+            utils.tissues[idx] = tissueList
 
     def test_page(self):
         ''' Test the main chicpea page. '''
@@ -59,23 +65,29 @@ class ChicpeaTestCase(TestCase):
         ''' Test chicpea search for a gene & tissue '''
         geneName = 'IL2RA'
         tissue = 'Monocytes'
-        request = self.factory.get("/chicpea/search?searchTerm="+geneName+"&tissue="+tissue+"&snp_track=gwas-barrett")
-        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+geneName+"&tissue="+tissue+"&snp_track=gwas-barrett")
+        targetIdx = 'cp:hg19_chicago_targets'
+        url = "/chicpea/search?searchTerm="+geneName+"&targetIdx="+targetIdx+"&tissue="+tissue+"&snp_track=gwas-barrett"
+        request = self.factory.get(url)
+        response = chicpeaSearch(request, url)
         self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_region(self):
         ''' Test chicpea search for a region '''
-        region = 'X:49683685-49687969'
-        request = self.factory.get("/chicpea/search?region="+region+"&snp_track=gwas-barrett")
-        response = chicpeaSearch(request, "/chicpea/search?region="+region+"&snp_track=gwas-barrett")
+        region = 'X:153043000-153390000'
+        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        url = "/chicpea/search?searchTerm="+region+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
+        request = self.factory.get(url)
+        response = chicpeaSearch(request, url)
         self._HICtest(str(response.content, encoding='utf8'))
 
     def test_chicpeasearch_snp(self):
         ''' Test chicpea search for a gene & tissue '''
         snp = 'rs2476601'
         tissue = 'Erythroblasts'
-        request = self.factory.get("/chicpea/search?searchTerm="+snp+"&tissue="+tissue+"&snp_track=gwas-barrett")
-        response = chicpeaSearch(request, "/chicpea/search?searchTerm="+snp+"&tissue="+tissue+"&snp_track=gwas-barrett")
+        targetIdx = 'cp:hg19_chicago_targets'
+        url = "/chicpea/search?searchTerm="+snp+"&targetIdx="+targetIdx+"&tissue="+tissue+"&snp_track=gwas-barrett"
+        request = self.factory.get(url)
+        response = chicpeaSearch(request, url)
         self._HICtest(str(response.content, encoding='utf8'))
 
     def _HICtest(self, json):
