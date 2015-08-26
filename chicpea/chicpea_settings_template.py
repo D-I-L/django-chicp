@@ -14,6 +14,7 @@ CHICP_IDX = OrderedDict([
      ),
     ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'idx_name', 'TRACKS':
               OrderedDict([
+                           ('gwas-barrett', {'NAME': 'T1D - Barrett et al.', 'TYPE': 't1d_barrett'}),
                          ])
               }
      ),
@@ -28,10 +29,10 @@ sampleLookup = {}
 
 stateLookup = {}
 
-DEFAULT_TARGET = ''
-DEFAULT_TISSUE = ''
-DEFAULT_TRACK = ''
-DEFAULT_FRAG = ''
-CP_GENE_IDX = ''
+DEFAULT_TARGET = 'cp:hg19_mifsud_gt_pm'
+DEFAULT_TISSUE = 'CD34'
+DEFAULT_TRACK = 'gwas-barrett'
+DEFAULT_FRAG = 'hg19_restriction_sites/hindiii'
+CP_GENE_IDX = 'cp:hg19_gene_details'
 
-TARGET_IDXS = {}
+TARGET_IDXS = {'cp:hg19_mifsud_gt_pm': 'Mifsud'}
