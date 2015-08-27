@@ -2,23 +2,23 @@ from collections import OrderedDict
 
 ''' details of all snp tracks and configuration for elastic indicies '''
 CHICP_IDX = OrderedDict([
-    ('userdata', {'NAME': 'User Data', 'INDEX': 'cp:hg19_userdata_bed', 'TRACKS':
+    ('userdata', {'NAME': 'User Data', 'INDEX': 'cp:hg19_userdata_bed', 'DATA_TYPE': 'log10p', 'TRACKS':
                   OrderedDict([
                                ])
                   }
      ),
-    ('ic', {'NAME': 'ImmunoChip', 'INDEX': 'idx_name', 'TRACKS':
+    ('ic', {'NAME': 'ImmunoChip', 'INDEX': 'idx_name', 'DATA_TYPE': 'log10p', 'TRACKS':
             OrderedDict([
                          ])
             }
      ),
-    ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'cp:hg19_gwas_bed', 'TRACKS':
+    ('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'cp:hg19_gwas_bed', 'DATA_TYPE': 'log10p', 'TRACKS':
               OrderedDict([
                            ('gwas-barrett', {'NAME': 'T1D - Barrett et al.', 'TYPE': 't1d_barrett'}),
                          ])
               }
      ),
-    ('pmi', {'NAME': 'PMI Data', 'INDEX': 'idx_name', 'TRACKS':
+    ('pmi', {'NAME': 'PMI Data', 'INDEX': 'idx_name', 'DATA_TYPE': 'ppi', 'TRACKS':
              OrderedDict([
                           ])
              }
