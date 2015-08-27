@@ -35,10 +35,10 @@ class ChicpeaTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicpea/index.html')
         self.assertIn(b'DEXI', response.content)
-        elasticJSON = Search(idx="chicpea_gene_target").get_mapping(mapping_type="gene_target")
-        tissueList = list(elasticJSON['chicpea_gene_target']['mappings']['gene_target']['_meta']['tissue_type'].keys())
-        for t in tissueList:
-            self.assertIn(t.replace("_", " ").encode('ascii'), response.content)
+        for idx in utils.tissues:
+            tissueList = utils.tissues[idx]
+            for t in tissueList:
+                self.assertIn(t.replace("_", " ").encode('ascii'), response.content)
 
     def test_page_with_ensg(self):
         ''' Test chicpea page with EnsEMBL Gene '''
