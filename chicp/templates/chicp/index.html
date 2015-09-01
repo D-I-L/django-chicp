@@ -1,14 +1,14 @@
-{% extends "chicpea/base.html" %}
+{% extends "chicp/base.html" %}
 {% load staticfiles %}
 {% block header_css %}
 
-<link href="{% static "chicpea/css/bootstrap-slider.css" %}" rel="stylesheet">
-<link href="{% static "chicpea/css/bootstrap.fd.css" %}" rel="stylesheet">
-<link href="{% static "chicpea/css/jquery.cookiebar.css" %}" rel="stylesheet">
-<link href="{% static "chicpea/css/tipsy.css" %}" rel="stylesheet">
+<link href="{% static "chicp/css/bootstrap-slider.css" %}" rel="stylesheet">
+<link href="{% static "chicp/css/bootstrap.fd.css" %}" rel="stylesheet">
+<link href="{% static "chicp/css/jquery.cookiebar.css" %}" rel="stylesheet">
+<link href="{% static "chicp/css/tipsy.css" %}" rel="stylesheet">
 
 <!-- Custom styles for this template -->
-<link href="{% static "chicpea/css/modal.css" %}" rel="stylesheet">
+<link href="{% static "chicp/css/modal.css" %}" rel="stylesheet">
 
 <style>
 <!--
@@ -71,7 +71,7 @@
 								</select>
 							</div>
 							<div class="strike"><span>OR</span></div>
-							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicpea/fileUpload">
+							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicp/fileUpload">
 								{% csrf_token %}
 								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
 							</form>
@@ -94,7 +94,7 @@
 				</span>
 				<h1 class="page-header" id="page_header"></h1>
 				<ol class="breadcrumb no-print" id="breadcrumb">
-					<li><a href="/chicpea/">Start</a></li>
+					<li><a href="/chicp/">Start</a></li>
 				</ol>
 				<div class="row svg-row">
 					<div class="col-sm-6">
@@ -161,7 +161,7 @@
 
 	<!-- Hidden <FORM> to submit the SVG data to the server, which will convert it to SVG/PDF/PNG downloadable file.
 		The form is populated and submitted by the JavaScript below. -->
-	<form id="svgform" method="post" action="/chicpea/download">
+	<form id="svgform" method="post" action="/chicp/download">
 		{% csrf_token %}
 		<input type="hidden" id="output_format" name="output_format" value="">
 		<input type="hidden" id="data-main" name="data-main" value="">
@@ -181,13 +181,13 @@
 
 
 {% block footer %}
-	<script type="text/javascript" src="{% static "chicpea/js/tipsy.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/jquery.isloading.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/bootstrap.fd.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookie.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/jquery.cookiebar.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/bootstrap-slider.js" %}"></script>
-	<script type="text/javascript" src="{% static "chicpea/js/hic-vis.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/tipsy.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/jquery.isloading.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/bootstrap.fd.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/jquery.cookie.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/jquery.cookiebar.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/bootstrap-slider.js" %}"></script>
+	<script type="text/javascript" src="{% static "chicp/js/hic-vis.js" %}"></script>
 	<script type="text/javascript">
 		function styles() {
 			var used = "";
@@ -247,7 +247,7 @@
 			var gwas = selectObj.options[selectObj.selectedIndex].value;
 			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
 			$.isLoading({ text: "Loading" });
-			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); console.warn(error);return;}
 				d3.select("#svg-container").selectAll(".track.snps").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
@@ -271,7 +271,7 @@
 			var gwas = $("#gwas").val();
 			
 			$.isLoading({ text: "Loading" });
-			d3.json("/chicpea/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); console.warn(error); return}
 				d3.select("#svg-container").selectAll(".middle.hic").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
