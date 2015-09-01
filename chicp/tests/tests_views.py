@@ -2,9 +2,9 @@ from django.core.urlresolvers import resolve, reverse
 from django.test import TestCase
 from django.test.client import RequestFactory
 
-from chicpea import chicpea_settings
-from chicpea import utils
-from chicpea.views import chicpea, chicpeaSearch
+from chicp import chicp_settings
+from chicp import utils
+from chicp.views import chicpea, chicpeaSearch
 from elastic.search import Search
 
 
@@ -12,7 +12,7 @@ class ChicpeaTestCase(TestCase):
     def setUp(self):
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
-        for idx in getattr(chicpea_settings, 'TARGET_IDXS'):
+        for idx in getattr(chicp_settings, 'TARGET_IDXS'):
             elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
             tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
             utils.tissues[idx] = tissueList
