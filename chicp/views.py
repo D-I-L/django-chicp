@@ -15,8 +15,8 @@ from django.core.management import call_command
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
 
-from chicpea import chicp_settings
-from chicpea import utils
+from chicp import chicp_settings
+from chicp import utils
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
 from elastic.search import Search, ElasticQuery
@@ -31,7 +31,7 @@ def chicpeaDocs(request):
     context = dict()
     context['title'] = 'CHiCP Documentation'
     context['page_header'] = 'Documentation'
-    return render(request, 'chicpea/docs.html', context, content_type='text/html')
+    return render(request, 'chicp/docs.html', context, content_type='text/html')
 
 
 def chicpea(request):
@@ -79,9 +79,9 @@ def chicpea(request):
     else:
         context['snp_track'] = defaultTrack
 
-    # return render(request, 'chicpea/index3.html', context, content_type='text/html')
-    # return render(request, 'chicpea/index2.html', context, content_type='text/html')
-    return render(request, 'chicpea/index.html', context, content_type='text/html')
+    # return render(request, 'chicp/index3.html', context, content_type='text/html')
+    # return render(request, 'chicp/index2.html', context, content_type='text/html')
+    return render(request, 'chicp/index.html', context, content_type='text/html')
 
 
 def chicpeaFileUpload(request, url):
@@ -487,7 +487,7 @@ def _build_frags_query(frags_idx, chrom, segmin, segmax):
 
 
 def _build_bigbed_query(tissue, chrom, segmin, segmax):
-    dataDir = os.path.join(settings.STATIC_ROOT, "chicpea/data/")
+    dataDir = os.path.join(settings.STATIC_ROOT, "chicp/data/")
     bigbedData = {}
     sampleLookup = getattr(chicp_settings, 'sampleLookup')
     for s in sampleLookup.get(tissue):
