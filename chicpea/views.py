@@ -27,9 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 # Create your views here.
+def chicpeaDocs(request):
+    context = dict()
+    context['title'] = 'CHiCP Documentation'
+    context['page_header'] = 'Documentation'
+    return render(request, 'chicpea/docs.html', context, content_type='text/html')
+
+
 def chicpea(request):
     queryDict = request.GET
     context = dict()
+    context['title'] = 'Capture HiC Plotter'
     context['searchTerm'] = 'IL2RA'
     context['tissue'] = 'Total_CD4_Activated'
     if queryDict.get("term"):
