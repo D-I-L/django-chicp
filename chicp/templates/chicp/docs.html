@@ -1,0 +1,69 @@
+{% extends "chicpea/base.html" %}
+{% block header_css %}{% endblock %}
+{% block header_js %}{% endblock %}
+
+
+{% block sidebar_content %}
+	<ol>
+		<li><a href="#installation">Installation</a></li>
+		<li>Loading Data and Elasticsearch</li>
+		<li>Loading Data and Elasticsearch</li>
+	</ol>
+{% endblock %}
+
+{% block content %}
+				<h1 class="page-header" id="page_header">{{ page_header }}</h1>
+				<a name="installation"></a><h3>Installation</h3>
+				<p>CHiCP is a Python3 <a href="https://www.djangoproject.com/" target="_blank">Django</a> application to visualize HiC interactions.  
+				The code is freely available in <a href="https://github.com/D-I-L/django-chicpea" target="_blank">GitHub</a> and can be easily setup to visualize 
+				your own data alongside publicly available data.</p>
+				<div class="panel panel-info">
+  					<div class="panel-body">
+						We have tested installation of CHiCP on Ubuntu Linux systems (14.04). The following prerequisite packages must be installed via aptitude...<br />
+						<ul>
+							<li>libffi-dev</li>
+							<li>libxml2-dev</li>
+							<li>libxslt1-dev</li>
+						</ul>
+					</div>
+				</div>
+				<h4>Installation Steps</h4>
+				<ol>
+					<li>Download &amp; Installation</li>
+					<strong>NB.</strong> The export to SVG uses <a href="https://github.com/btel/svg_utils" target="_blank">svg_utils</a>, the sed command below fixes an issue.
+					<div class="well">
+						<code class="prettyprint">
+						PYENV_HOME=/dir/to/install/.py-env<br />
+						pip install -e git://github.com/D-I-L/django-chicpea.git#egg=chicpea<br />
+					    pip install --exists-action w -r $PYENV_HOME/src/chicpea/chicpea/requirements.txt <br />
+					    sed -i 's|from transform import|from svgutils.transform import|' $PYENV_HOME/src/svgutils/src/svgutils/templates.py
+						</code>
+					</div>
+					<li>Setting up the Django App</li>
+					CHiCP requires Django. It can be run on it's own in which case you will need to set up a django project, or can be added to an existing project as an app.
+					<div class="well">
+						<code class="prettyprint">
+						django-admin startproject projCHICP<br />
+						cd projCHICP
+						</code>
+					</div>
+					Once you have a Django project, edit the settings.py file to add CHiCP to the list of installed apps.
+					<div class="well">
+						<code class="prettyprint">
+						INSTALLED_APPS = (</br/>
+						    ...<br />
+						    'chicpea',<br />
+						    ...</br/>
+						)
+
+						</code>
+					</div>
+					
+				</ol>
+				
+{% endblock %}
+
+
+{% block footer %}
+	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+{% endblock %}

@@ -205,7 +205,7 @@ function renderHic(term, tissue, breadcrumb) {
 	
 	resetPage(term, tissue, breadcrumb)
 	
-	url = "/chicpea/search?searchTerm=" + term + '&tissue=' + tissue+'&targetIdx='+targetIdx;
+	url = "/chicp/search?searchTerm=" + term + '&tissue=' + tissue+'&targetIdx='+targetIdx;
 	if (gwas != "" && $.cookie('cb-enabled') == 'accepted') url += '&snp_track=' + gwas;
 	if (region != "") url += '&region='+region;
 	$("#regionSearch").val("");
@@ -886,7 +886,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
 		
-	d3.json("/chicpea/subSearch?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+	d3.json("/chicp/subSearch?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 			if (error) { $("#panel-" + type).isLoading( "hide" ); return console.warn(error);}
 			
 			if (type === 'bait') borderColor = 'blue';

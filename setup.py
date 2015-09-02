@@ -9,12 +9,12 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 ROOT = os.path.abspath(os.path.dirname(__file__))
 
 setup(
-    name='chicpea',
+    name='chicp',
     version='0.1a1',
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    url='http://github.com/D-I-L/django-chicpea',
+    url='http://github.com/D-I-L/django-chicp',
     description='A Django app to visualise HiC interactions.',
     long_description=open(os.path.join(ROOT, 'README.md')).read(),
     install_requires=["Django>=1.8"],
