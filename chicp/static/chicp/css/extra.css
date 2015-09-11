@@ -219,8 +219,37 @@ html, body {
 }
 
 
+/*--------------*/
+/* CSS for Docs */
+/*--------------*/
+.subheader{
+	font-style:italic;
+	padding-top:0.5em;
+}
 
+pre.prettyprint {
+	margin:0;
+}
 
+a.doc_link {
+	top:-50px;
+	visibility:hidden;
+	display: block;
+	position:relative
+}
+
+h3.docs3 {
+	font-weight: bold;
+	clear:both;
+    border-top: 1px solid black;
+    padding-top: .2em;
+}
+
+h4.docs4 {
+	clear:both;
+	border-top: 1px #eee solid;
+	padding-top: 0.5em;
+}
 
 /*-------------*/
 /* CSS for SVG */
