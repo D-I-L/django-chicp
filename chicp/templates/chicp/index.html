@@ -248,13 +248,29 @@
 			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+				d3.select("#message").remove();
 				if (error) {$.isLoading( "hide" ); console.warn(error);return;}
-				d3.select("#svg-container").selectAll(".track.snps").remove();
+
+				d3.select("#svg-container").selectAll(".snp").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
+	    		
+				if (data.error) {
+					$.isLoading( "hide" ); 
+					div = d3.select("#svg-container")
+						.insert("div",":first-child")
+						.html("<h1>"+data.error+"</h1>")
+						.attr("id", "message")
+						.style("width", "100%")
+						.style("text-align", "center");
+					return;
+				}
+
+				d3.select("#svg-container").selectAll(".track.snps").remove();
 		        var totalBP = data.meta.rend - data.meta.rstart;
 				addSNPTrack(data.snps, data.snp_meta);
 		        addSNPTrackPoints(data.meta, data.snps, data.snp_meta, totalBP);
+		        $("#snp_track_header").html("SNP Data: "+$('#gwas option:selected').text());
 		        $.isLoading( "hide" );
 			});
 		}
@@ -306,7 +322,6 @@
 		$(document).ready(function() {
 		
 			localStorage["interactionScore"] = localStorage["interactionScore"] || 5;
-
 			var interactionScore = localStorage["interactionScore"];
 			
 			// Interaction Score Slider
@@ -413,6 +428,7 @@
 			$(".tissue").hide();
 			$(document.getElementsByClassName(target)).css('display', 'block');
 			$(".tissue").find("input:radio").each( function () {
+				console.log()
 				if ($(this).val() == "{{ default_tissue }}")
 					$(this).prop('checked', true);
 				else
@@ -460,6 +476,13 @@
 				else return;
 				theRules[0].style.display = '';
 			}
+			
+
+			var termParam = getQueryVariable("term");
+			if (termParam == undefined){ termParam = 'IL2RA'; }
+			var tissueParam = $("input:radio[name=tissue]:checked").val();
+			renderHic(termParam, tissueParam, 1)
+			
 		});
 	</script>
 {% endblock %}
