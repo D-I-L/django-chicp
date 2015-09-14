@@ -187,6 +187,7 @@ function log10(val) {
 
 //function renderHic(term, tissue, diameter, breadcrumb) {
 function renderHic(term, tissue, breadcrumb) {
+	$.isLoading({ text: "Loading" });
 	diameter = $("#svg-container").width();
 	if (diameter > $(".svg-row").height()) diameter =  $(".svg-row").height();
 	trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
@@ -223,6 +224,8 @@ function renderHic(term, tissue, breadcrumb) {
 				.style("width", "100%")
 				.style("text-align", "center")
 				.style("padding-top", "200px");
+			
+			$.isLoading( "hide" );
 			return;
 		}
 		data = json;
@@ -402,6 +405,7 @@ function renderHic(term, tissue, breadcrumb) {
 			$("#"+t+"_count").text("("+tissues[t]+")");
 		}
 		
+		$.isLoading( "hide" );
 		// end of JSON call     
 	});
 }
