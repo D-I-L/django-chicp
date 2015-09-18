@@ -101,7 +101,7 @@ def chicpeaFileUpload(request, url):
             parts = re.split("\s", line)
 
         if len(parts) != 5:
-            logger.warn("WARNING: unexpected number of columns: "+line)
+            logger.warn("WARNING: unexpected number of columns ("+len(parts)+"): "+line)
             continue
 
         f.seek(0)

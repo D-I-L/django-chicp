@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-''' details of all snp tracks and configuration for elastic indicies '''
+''' details of all snp tracks and configuration for elastic indicies for snp track '''
 CHICP_IDX = OrderedDict([
     ('userdata', {'NAME': 'User Data', 'INDEX': 'cp:hg19_userdata_bed', 'DATA_TYPE': 'log10p', 'TRACKS':
                   OrderedDict([

@@ -187,6 +187,7 @@ function log10(val) {
 
 //function renderHic(term, tissue, diameter, breadcrumb) {
 function renderHic(term, tissue, breadcrumb) {
+	$.isLoading({ text: "Loading" });
 	diameter = $("#svg-container").width();
 	if (diameter > $(".svg-row").height()) diameter =  $(".svg-row").height();
 	trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
@@ -200,7 +201,6 @@ function renderHic(term, tissue, breadcrumb) {
 		term = parts[0]
 		region = parts[1];
 		$("#regionSearch").val(region);
-		console.log("here")
 	}	
 	
 	resetPage(term, tissue, breadcrumb)
@@ -224,6 +224,8 @@ function renderHic(term, tissue, breadcrumb) {
 				.style("width", "100%")
 				.style("text-align", "center")
 				.style("padding-top", "200px");
+			
+			$.isLoading( "hide" );
 			return;
 		}
 		data = json;
@@ -287,6 +289,7 @@ function renderHic(term, tissue, breadcrumb) {
 			.attr("text-anchor", "left")  
 			.style("font-size", "20px")
 			.attr("class", "svg_only")
+			.attr("class", "page-header")
 			.text($("#page_header").html());
 		
 		vis.append("text")
@@ -295,6 +298,7 @@ function renderHic(term, tissue, breadcrumb) {
 			.style("font-size", "14px")
 			.style("font-style", "italic")
 			.attr("class", "svg_only")
+			.attr("id", "snp_track_header")
 			.text("SNP Data: "+$('#gwas option:selected').text());
 		
 		
@@ -401,6 +405,7 @@ function renderHic(term, tissue, breadcrumb) {
 			$("#"+t+"_count").text("("+tissues[t]+")");
 		}
 		
+		$.isLoading( "hide" );
 		// end of JSON call     
 	});
 }
@@ -1156,7 +1161,7 @@ function resetPage(term, tissue, breadcrumb) {
     $(".tipsy").remove();
     resetVis();
     $("#search_term").val(term);
-    $("#page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    $(".page-header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
     termText = term
     termId = term
     if ($("#regionSearch").val() != '' && $("#regionSearch").val() != term){
@@ -1207,18 +1212,17 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 	
 
 $(document).ready(function () {
-    $("#pushme").bind("click", function () {
-    		var tissue = $("input:radio[name=tissue]:checked").val();
-    		var term = $("#search_term").val();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
-    		return (false);
-    });
+		
+	$("#search_term").keyup(function(event){
+			if(event.which == 13){ doSearch(); }
+	});
+	
+	$("#pushme").bind("click", function () { doSearch(); });
 
     $("input:radio[name=tissue]").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
     		var gene = $("#search_term").val();
-    		$("#page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    		$(".page-header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
     		
     		resetVis();
     		pathDetails(d3.select("#svg-container").selectAll("path.interaction"));
@@ -1233,15 +1237,14 @@ $(document).ready(function () {
 });
 
 
+function doSearch(){
+	var tissue = $("input:radio[name=tissue]:checked").val();
+	var term = $("#search_term").val();
+	renderHic(term, tissue, 1);
+	return (false);	
+}
+	
 function reDrawSVG(){
 	d3.selectAll("svg").remove();
 	renderVis();
 }
-
-
-var termParam = getQueryVariable("term");
-if (termParam == undefined){ termParam = 'IL2RA'; }
-$("input:radio[name=tissue]:first").attr('checked', true);
-var tissueParam = $("input:radio[name=tissue]:checked").val();
-//renderHic(termParam, tissueParam, diameter, 1)
-renderHic(termParam, tissueParam, 1)
