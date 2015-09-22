@@ -5,7 +5,7 @@ var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
 var snpCutoff, maxscore, thresh
 
 var interactionColor = d3.scale.linear().domain([0, 20]).range(["blue", "red"]);
-var start, CHR, totalBP, region;
+var start, CHR, totalBP, region, META;
 var pi = Math.PI;  
 var selecting = 0;
 
@@ -144,17 +144,30 @@ function computeStrandPath(start, end, r, totalBP, flag) {
 }
 
 function computeArcPath(start, end, r1, r2, totalBP) {
+	
     startcoords1 = computeCartesian(r1, start, totalBP);
     endcoords1 = computeCartesian(r1, end, totalBP);
     startcoords2 = computeCartesian(r2, start, totalBP);
     endcoords2 = computeCartesian(r2, end, totalBP);
+    
+	if (end > totalBP || start == 1){
+		if (start == 1){
+			startcoords1 = computeCartesian(r1, start-totalBP * (angleOffset/arcAvail), totalBP);
+			startcoords2 = computeCartesian(r2, start-totalBP * (angleOffset/arcAvail), totalBP);
+		}
+		else{
+			endcoords1 = computeCartesian(r1, totalBP+(totalBP * (angleOffset/arcAvail)), totalBP);
+			endcoords2 = computeCartesian(r2, totalBP+(totalBP * (angleOffset/arcAvail)), totalBP);
+		}	
+	}   
+    
     var flag1 = "0,1";
     if ((end - start) /totalBP > 0.5){
-        	flag1 = "1,1";
-        }
-        var flag2 = "0,0";
-        if ((end - start) /totalBP > 0.5) {
-        flag2 = "0,1";
+    	flag1 = "1,1";
+    }
+    var flag2 = "0,0";
+    if ((end - start) /totalBP > 0.5) {
+    	flag2 = "1,0";
     }
     return ("M" + startcoords1.x + "," + startcoords1.y +
         " A" + r1 + "," + r1 + " 0 " + flag1 + " " + endcoords1.x + "," + endcoords1.y +
@@ -231,20 +244,21 @@ function renderHic(term, tissue, breadcrumb) {
 		data = json;
 		var genes = data.genes;
 		var snps = data.snps;
-		var meta = data.meta;
+//		var meta = data.meta;
 		var extras = data.extra;
 		
-		totalBP = data.meta.rend - data.meta.rstart;
-		start = parseInt(meta.ostart);
-		CHR = meta.rchr;
+		META = data.meta;
+		totalBP = META.rend - META.rstart;
+		start = parseInt(META.ostart);
+		CHR = META.rchr;
 		region = data.region
 		                                                                 
 		$("#region").val(data.region);
 		$("#totalBP").val(totalBP); 
 		
 		var tissues = [];
-		for (var i=0;i<meta.tissues.length;i++) {
-			tissues[meta.tissues[i]] = 0;
+		for (var i=0;i<META.tissues.length;i++) {
+			tissues[META.tissues[i]] = 0;
 		}
 		
 		var hics = data.hic;
@@ -264,7 +278,7 @@ function renderHic(term, tissue, breadcrumb) {
 		}
 		
 		// set this to make genes that are close but not overlapping bump
-		var offset = 0;
+		var offset = 100;
 		adjustBump(genes, offset);
 		var bt = {};
 		for (var g in genes) {
@@ -321,8 +335,8 @@ function renderHic(term, tissue, breadcrumb) {
 		.append("path")
 		.attr("d", "M0,0 L-1,3 L0,6")
 		.attr("class", function (d) {
-				if (d =='hilight') return "hilight";
-				else return d;
+			if (d =='hilight') return "no_svg hilight";
+			else return "no_svg " +d;
 		});
 		
 		vis.append("g").attr("class", "right arrow_heads").selectAll("defs")
@@ -353,12 +367,12 @@ function renderHic(term, tissue, breadcrumb) {
 		if (extras.length > 0) addExtraData(extras);		
 		
 		//add gene track
-		addGeneTrack(data.meta, data.genes, totalBP);
+		addGeneTrack(data.genes, totalBP);
 		
 		//add SNP track
-		addSNPTrackPoints(data.meta, data.snps, data.snp_meta, totalBP);
+		addSNPTrackPoints(data.snps, data.snp_meta, totalBP);
 		
-		addInteractions(data.meta, hics, totalBP, tissues);
+		addInteractions(hics, totalBP, tissues);
 
 		var endAngle = (angleOffset * pi)/180,
 		startAngle = ((arcAvail + angleOffset) * pi) / 180;
@@ -370,12 +384,6 @@ function renderHic(term, tissue, breadcrumb) {
 		var wedge = vis.append("path").attr("d", arc).attr("id", "originWedge")
 			.attr("fill", "lightgrey")
 			.attr("transform", trans)
-/*			.on("mouseout", function (d) {
-					if (selecting){
-						selecting = 0;
-						zoomIn(innerRadius, circAvail, angleOffset);
-					}
-			})*/
 			.on("click", function(d){
 					id = $("#breadcrumb").children().last().attr('id')
 					if (id.match(/__/g)){
@@ -388,6 +396,13 @@ function renderHic(term, tissue, breadcrumb) {
 						//renderHic(term, tissue, diameter, 1);
 					}
 			});
+			
+			vis.append("path")
+				.attr("d", d3.svg.arc()
+					.innerRadius(diameter * 0.29).outerRadius(diameter * 0.4)
+					.startAngle((-0.5 * pi)/180).endAngle((0.5 * pi)/180))
+				.attr("fill", "white")
+				.attr("transform", trans)
 			
 		if ($("#breadcrumb").children().last().attr('id').match(/__/g)){
 			wedge.style('cursor', 'zoom-out');
@@ -600,10 +615,9 @@ function addExtraData(extras){
 	vis.selectAll("path.extras").each(function(x) { $(this).tipsy({ gravity: 'e', opacity: 1, html: true, offset: 5, hoverlock: true }); });
 }
 
-function addGeneTrack(meta, genes, totalBP){
+function addGeneTrack(genes, totalBP){
 	
 	var vis = d3.select("#main-svg");
-//	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	
 	var innerRadius = diameter * 0.35;
@@ -663,7 +677,6 @@ function addGeneTrack(meta, genes, totalBP){
 	        		return (computePointPath(d.start, d.end, 0, 0, 0, (diameter * 0.36) + (d.bumpLevel * 15), totalBP, diameter))
 	        })
 			.text(function (d) {
-	        		//console.log(d.gene_name);
 	        		return d.gene_name;
 	        });
 }
@@ -697,10 +710,9 @@ function addSNPTrack(snps, snpMeta){
 	}
 }
 
-function addSNPTrackPoints(meta, snps, snpMeta, totalBP){
+function addSNPTrackPoints(snps, snpMeta, totalBP){
 	
 	var vis = d3.select("#main-svg");
-	//var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "200px");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	var innerRadius = diameter * 0.29;
 	
@@ -731,12 +743,13 @@ function addSNPTrackPoints(meta, snps, snpMeta, totalBP){
 		})
 		
 		vis.selectAll("path.snp")
-			.attr("title", function(s) { return styleTooltip(s.name, snpMeta.score_text +" = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(meta.ostart))) })
+			.attr("title", function(s) { return styleTooltip(s.name, snpMeta.score_text +" = " + parseFloat(s.score).toFixed(2) + "</br>" + numberWithCommas(parseInt(s.start) + parseInt(META.ostart))) })
 			.each(function(s) { $(this).tipsy({ gravity: "w", opacity: 1, html: true, offset: 5, hoverlock: true }); });
 }
 
-function addInteractions(meta, hics, totalBP, tissues) {
+function addInteractions(hics, totalBP, tissues) {
 	// add hic links
+	//console.log(META);
 	
 	var vis = d3.select("#main-svg");
 	var tissue = $("input:radio[name=tissue]:checked").val();
@@ -750,15 +763,29 @@ function addInteractions(meta, hics, totalBP, tissues) {
 		})
 		.attr("class", function(d){
 				classes = "interaction";
-				for (var i=0;i<meta.tissues.length;i++) {
-					if (parseFloat(d[meta.tissues[i]]) >= localStorage["interactionScore"]){
-						classes += " "+meta.tissues[i];
-						tissues[meta.tissues[i]]++;
+				for (var i=0;i<META.tissues.length;i++) {
+					if (parseFloat(d[META.tissues[i]]) >= localStorage["interactionScore"]){
+						classes += " "+META.tissues[i];
+						tissues[META.tissues[i]]++;
 					}
 				}
 				return classes;
 		})
 		.attr("d", function (d) {
+				if (d.oeEnd > totalBP || d.baitEnd > totalBP){
+					end = totalBP+(totalBP * (angleOffset/arcAvail))
+					if (d.oeEnd > totalBP)
+						return computePath(d.baitStart + ((d.baitEnd - d.baitStart) / 2), d.oeStart + ((end - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
+					else
+						return computePath(d.baitStart + ((end - d.baitStart) / 2), d.oeStart + ((d.oeEnd - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
+				}
+				if (d.oeStart == 1 || d.baitStart == 1){
+					start = 1-(totalBP * (angleOffset/arcAvail))
+					if (d.oeStart == 1)
+						return computePath(d.baitStart + ((d.baitEnd - d.baitStart) / 2), start + ((d.oeEnd - start) / 2), diameter * 0.28, totalBP, diameter);
+					else
+						return computePath(start + ((d.baitEnd - start) / 2), d.oeStart + ((d.oeEnd - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
+				}
 				return computePath(d.baitStart + ((d.baitEnd - d.baitStart) / 2), d.oeStart + ((d.oeEnd - d.oeStart) / 2), diameter * 0.28, totalBP, diameter);
 		})
 		.attr("transform", trans)
@@ -777,12 +804,9 @@ function addInteractions(meta, hics, totalBP, tissues) {
 
 function pathDetails(interactions){
 	var vis = d3.select("#main-svg");
-//	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0).style("width", "100px");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	
 	data = interactions.data();
-	
-	//var totalBP = $("#totalBP").val();
 	
 	interactions.attr("stroke", function (d) {
 			if (parseFloat(d[tissue]) >= localStorage["interactionScore"]){
@@ -791,6 +815,11 @@ function pathDetails(interactions){
 			else{
 				return "lightgrey";
 			}
+	})
+	.attr("stroke-dasharray", function (d) {
+			if ((d.oeEnd > totalBP && d.oeStart > totalBP) || (d.baitEnd > totalBP && d.baitStart > totalBP) || (d.oeEnd == 1 && d.oeStart == 1) || (d.baitEnd == 1 && d.baitStart == 1))
+				return 10;
+			return 0;
 	})
 	.on("mouseover", function (d, i) {
 			vis.selectAll("path.interaction").sort(function (a, b) {
@@ -817,7 +846,7 @@ function pathDetails(interactions){
 			vis.append("path")
 				.attr("class", "deleteMe")
 				.attr("d", computeArcPath(d.oeStart, d.oeEnd, diameter * 0.28, diameter / 2.5, totalBP))
-				.style("stroke-width", 1)
+				.style("stroke-width", 2)
 				.style("stroke", "red")
 				.attr("transform", trans)
 				.attr("fill", "none")
@@ -825,7 +854,7 @@ function pathDetails(interactions){
 			vis.append("path")
 				.attr("class", "deleteMe")
 				.attr("d", computeArcPath(d.baitStart, d.baitEnd, diameter * 0.28, diameter / 2.5, totalBP))
-				.style("stroke-width", 1)
+				.style("stroke-width", 2)
 				.style("stroke", "blue")
 				.attr("transform", trans)
 				.attr("fill", "none")
