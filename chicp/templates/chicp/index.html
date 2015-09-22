@@ -97,10 +97,10 @@
 					<li><a href="/chicp/">Start</a></li>
 				</ol>
 				<div class="row svg-row">
-					<div class="col-sm-6">
+					<div class="col-sm-12 col-lg-6">
 						<div id="svg-container"></div>
 					</div>
-					<div class="col-sm-6">
+					<div class="col-sm-12 col-lg-6">
 						<div class="row">
 							<div class="col-sm-12">
 								<div class="panel panel-info">
@@ -268,8 +268,10 @@
 
 				d3.select("#svg-container").selectAll(".track.snps").remove();
 		        var totalBP = data.meta.rend - data.meta.rstart;
+		        META = data.meta;
+		        console.log(META)
 				addSNPTrack(data.snps, data.snp_meta);
-		        addSNPTrackPoints(data.meta, data.snps, data.snp_meta, totalBP);
+		        addSNPTrackPoints(data.snps, data.snp_meta, totalBP);
 		        $("#snp_track_header").html("SNP Data: "+$('#gwas option:selected').text());
 		        $.isLoading( "hide" );
 			});
@@ -293,6 +295,7 @@
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
 		        var totalBP = data.meta.rend - data.meta.rstart;
+		        META = data.meta;
 		        var hics = data.hic;
 				if (hics.length == 0) {
 					div = d3.select("#svg-container")
@@ -309,10 +312,10 @@
 				    hics[i].id = i + 1;
 				}
 				var tissues = [];
-				for (var i=0;i<data.meta.tissues.length;i++) {
-					tissues[data.meta.tissues[i]] = 0;
+				for (var i=0;i<META.tissues.length;i++) {
+					tissues[META.tissues[i]] = 0;
 				}
-		        addInteractions(data.meta, hics, totalBP, tissues);
+		        addInteractions(hics, totalBP, tissues);
 				for(var t in tissues) {
 					$("#"+t+"_count").text("("+tissues[t]+")");
 				}
