@@ -62,7 +62,7 @@ class ChicpeaTestCase(TestCase):
     def test_chicpeasearch_gene(self):
         ''' Test CHiCP search for a gene & tissue '''
         geneName = 'IL2RA'
-        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        targetIdx = 'cp:hg19_mifsud_chicago_pm'
         url = "/chicp/search?searchTerm="+geneName+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
         request = self.factory.get(url)
         response = chicpeaSearch(request, url)
@@ -71,7 +71,7 @@ class ChicpeaTestCase(TestCase):
     def test_chicpeasearch_region(self):
         ''' Test CHiCP search for a region '''
         region = 'X:153043000-153390000'
-        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        targetIdx = 'cp:hg19_mifsud_chicago_pm'
         url = "/chicp/search?searchTerm="+region+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
         request = self.factory.get(url)
         response = chicpeaSearch(request, url)
@@ -80,7 +80,7 @@ class ChicpeaTestCase(TestCase):
     def test_chicpeasearch_snp(self):
         ''' Test CHiCP search for a gene & tissue '''
         snp = 'rs2476601'
-        targetIdx = 'cp:hg19_mifsud_gt_pm'
+        targetIdx = 'cp:hg19_mifsud_chicago_pm'
         url = "/chicp/search?searchTerm="+snp+"&targetIdx="+targetIdx+"&snp_track=gwas-barrett"
         request = self.factory.get(url)
         response = chicpeaSearch(request, url)
