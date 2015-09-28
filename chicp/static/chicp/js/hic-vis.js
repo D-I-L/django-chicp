@@ -302,8 +302,7 @@ function renderHic(term, tissue, breadcrumb) {
 			.attr("x", 0).attr("y", 0)
 			.attr("text-anchor", "left")  
 			.style("font-size", "20px")
-			.attr("class", "svg_only")
-			.attr("class", "page-header")
+			.attr("class", "page-header svg_only")
 			.text($("#page_header").html());
 		
 		vis.append("text")
