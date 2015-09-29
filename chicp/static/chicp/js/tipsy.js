@@ -102,7 +102,7 @@
         },
         
         hide: function() {
-        	if ($(this.$tip[0]).hasClass('deleteClick')) return;
+        	if ($(this.$tip[0])!== undefined && $(this.$tip[0]).hasClass('deleteClick')) return;
             if (this.options.fade) {
                 this.tip().stop().fadeOut(function() { $(this).remove(); });
             } else {
