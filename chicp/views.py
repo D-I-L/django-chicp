@@ -492,6 +492,11 @@ def _build_bigbed_query(tissue, chrom, segmin, segmax):
     sampleLookup = getattr(chicp_settings, 'sampleLookup')
     for s in sampleLookup.get(tissue):
         bp = []
+        s_desc = ''
+        if s.find(":") > 0:
+            parts = re.split(":", s)
+            s = parts[0]
+            s_desc = parts[1]
         inFile = dataDir+s+".bb"
         if (os.path.exists(inFile)):
             outFile = NamedTemporaryFile(delete=False)
@@ -500,12 +505,12 @@ def _build_bigbed_query(tissue, chrom, segmin, segmax):
                 for line in f:
                     parts = re.split(r'\t+', line.rstrip('\n'))
                     if len(parts) == 4:
-                        bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3], 'sample': s,
+                        bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3], 'sample': s, 'label': s_desc,
                                    'desc': getattr(chicp_settings, 'stateLookup').get(parts[3]).get('desc'),
                                    'color': getattr(chicp_settings, 'stateLookup').get(parts[3]).get('color')})
                     else:
                         bp.append({'start': parts[1], 'end': parts[2], 'name': parts[3],
-                                   'color': parts[8], 'sample': s, 'desc': parts[3]})
+                                   'color': parts[8], 'sample': s, 'label': s_desc, 'desc': parts[3]})
                 bp = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], bp)
             bigbedData[s] = bp
     return bigbedData
