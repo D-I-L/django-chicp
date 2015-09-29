@@ -15,7 +15,10 @@ var angleOffset = 5,
 	endAngle = ((arcAvail + angleOffset) * pi) / 180;
 	
 var styleTooltip = function(name, description) {
-  return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
+	if (typeof description !== 'undefined')
+		return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
+	else
+		return "<p class='name'>" + name + "</p>";
 };
     		
 function getQueryVariable(variable) {
@@ -334,8 +337,8 @@ function renderHic(term, tissue, breadcrumb) {
 		.append("path")
 		.attr("d", "M0,0 L-1,3 L0,6")
 		.attr("class", function (d) {
-			if (d =='hilight') return "no_svg hilight";
-			else return "no_svg " +d;
+			if (d =='hilight') return "svg_hide hilight";
+			else return "svg_hide " +d;
 		});
 		
 		vis.append("g").attr("class", "right arrow_heads").selectAll("defs")
@@ -355,8 +358,8 @@ function renderHic(term, tissue, breadcrumb) {
 		.append("path")
 		.attr("d", "M0,0 L1,3 L0,6")
 		.attr("class", function (d) {
-				if (d =='hilight') return "hilight";
-				else return d;
+				if (d =='hilight') return "svg_hide hilight";
+				else return "svg_hide " +d;
 		});
 		
 		
@@ -409,12 +412,11 @@ function renderHic(term, tissue, breadcrumb) {
 			
 				
 		var text = vis.append("text")
-			.attr("x", 10).attr("dy", -5);
-	
-		text.append("textPath")
-			.attr("xlink:href","#originWedge")
 			.text("chr"+CHR)
-		
+			.attr("dy", "-.35em")
+			.attr("text-anchor", "middle")
+			.attr("transform", "translate(" + diameter * 0.5 + ","+ ((diameter * 0.5) - (diameter * 0.4)) +")")
+			
 		for(var t in tissues) {
 			$("#"+t+"_count").text("("+tissues[t]+")");
 		}
@@ -1154,31 +1156,34 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				
 				var states = blueprint.selectAll(".blueprint")
 					.data(data.blueprint[sample])
-					.enter(); 
-				
-				/*var blueprint = svgContainer.append("g").attr("class", "track blueprint "+sample).selectAll(".blueprint")
-					.data(data.blueprint[sample])
-					.enter(); //.append("g");
-					//.attr("class", "blueprint");*/
+					.enter();
 				
 				states.append("path")
-					.attr("class", "line bp_states")
+					.attr("class", "line bp_states "+sample)
 					.attr("d", function (d) {
 							return line([ { x: d.start, y: trackOffset}, { x: d.end, y: trackOffset }]);
 					})
 					.attr("stroke", function (d) { return "rgb("+d.color+")"; })
 					.attr("stroke-width", "6px");
 					
-				svgContainer.selectAll("path.bp_states")
-					.attr("title", function(s){ return styleTooltip(sample, s.desc) })
+				svgContainer.selectAll("path.bp_states."+sample)
+					.attr("title", function(s){ return styleTooltip(s.label, s.desc) })
 					.each(function(s) { $(this).tipsy({ gravity: 'n', opacity: 1, html: true, offset: 5, hoverlock: true }); });
 					
 				blueprint.append("text")
-					.attr("x", 0)
+					.attr("x", 10)
 					.attr("y", trackOffset+10)
 					.attr("dy", ".35em")
 					.style("font-size", "0.9em")
-					.text(sample)
+					.style("font-family", "FontAwesome")
+					.text("\uf059")
+					.attr("id", "label-"+sample)
+					.attr("class", "svg_hide")
+					
+				svgContainer.selectAll("text#label-"+sample)
+					.attr("title", styleTooltip(data.blueprint[sample][0]["label"]+" ("+sample+")") )
+					.each(function(s) { $(this).tipsy({ gravity: 'e', opacity: 1, html: true, offset: 5, hoverlock: true }); });
+					
 			}
 			$("#panel-" + type).isLoading( "hide" ); 
 	});	

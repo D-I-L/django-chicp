@@ -206,7 +206,7 @@
  
 			var s = document.createElement('style');
 			s.setAttribute('type', 'text/css');
-			s.innerHTML = "<![CDATA[\n" + used + "svg_only{ display:inline; }\n]]>";
+			s.innerHTML = "<![CDATA[\n" + used + ".svg_only{ display:inline; }\n.svg_hide{ display:none }\n]]>";
 			
 			return s.innerHTML;
 		}
