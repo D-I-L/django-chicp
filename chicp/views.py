@@ -137,7 +137,11 @@ def chicpeaSearch(request, url):
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
 
-    logger.warn("### "+searchType+" - "+searchTerm+' ###')
+    if targetIdx not in utils.tissues:
+        for idx in getattr(chicp_settings, 'TARGET_IDXS'):
+            elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
+            tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
+            utils.tissues[idx] = tissueList
 
     if queryDict.get("region") or re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")):
         searchType = 'region'
@@ -158,10 +162,12 @@ def chicpeaSearch(request, url):
         if searchType != 'region':
             searchType = 'snp'
 
+    logger.warn("### "+searchType+" - "+searchTerm+' ###')
+
     if searchType == 'region':
         query_bool = BoolQuery()
         filter_bool = BoolQuery()
-        if searchTerm and len(addList) == 0:
+        if searchTerm and len(addList) == 0 and re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")) == None:
             query_bool.must([Query.query_string(searchTerm, fields=["name", "ensg"]),
                              Query.term("baitChr", chrom),
                              Query.term("oeChr", chrom),
