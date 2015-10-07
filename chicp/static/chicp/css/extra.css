@@ -285,15 +285,15 @@ svg .genes path.pseudogene { stroke: #7f7f7f; }
 svg .genes path.processed_transcript { stroke: #bcbd22; }
 
 svg .genes path.line.hilight { fill: yellow; }
-svg .genes path.line.misc_RNA { fill: #ff7f0e; }
-svg .genes path.line.protein_coding { fill: #1f77b4; }
-svg .genes path.line.lincRNA { fill: #2ca02c; }
-svg .genes path.line.snoRNA { fill: #d62728; }
-svg .genes path.line.antisense { fill: #9467bd; }
-svg .genes path.line.miRNA { fill: #e377c2; }
-svg .genes path.line.snRNA { fill: #8c564b; }
-svg .genes path.line.pseudogene { fill: #7f7f7f; }
-svg .genes path.line.processed_transcript { fill: #bcbd22; }
+svg .genes path.line.misc_RNA, rect.misc_RNA { fill: #ff7f0e; }
+svg .genes path.line.protein_coding, rect.protein_coding { fill: #1f77b4; }
+svg .genes path.line.lincRNA, rect.lincRNA { fill: #2ca02c; }
+svg .genes path.line.snoRNA, rect.snoRNA { fill: #d62728; }
+svg .genes path.line.antisense, rect.antisense { fill: #9467bd; }
+svg .genes path.line.miRNA, rect.miRNA { fill: #e377c2; }
+svg .genes path.line.snRNA, rect.snRNA { fill: #8c564b; }
+svg .genes path.line.pseudogene, rect.pseudogene { fill: #7f7f7f; }
+svg .genes path.line.processed_transcript, rect.processed_transcript { fill: #bcbd22; }
 
 svg .exon path.line.tss { stroke-width:2px; fill: white }
                 

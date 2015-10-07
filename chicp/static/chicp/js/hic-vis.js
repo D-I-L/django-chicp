@@ -1,6 +1,6 @@
 var diameter = $("#svg-container").width();
 if (diameter > $(".svg-row").height()) diameter =  $(".svg-row").height();
-var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
+var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.45 + ")";
 
 var snpCutoff, maxscore, thresh
 
@@ -187,7 +187,7 @@ function computePointPath(start, end, score, minscore, maxscore, r, totalBP, dia
     if (adjMaxscore > 0)
     	radius += ((parseFloat(adjScore) / adjMaxscore) * trackwidth)
     var startcoords = computeCartesian(radius, start, totalBP);
-    return "translate(" + (startcoords.x + (diameter * 0.5)) + "," + (startcoords.y + (diameter * 0.5)) + ")";
+    return "translate(" + (startcoords.x + (diameter * 0.5)) + "," + (startcoords.y + (diameter * 0.45)) + ")";
 }
 
 function numberWithCommas(x) {
@@ -205,8 +205,8 @@ function log10(val) {
 function renderHic(term, tissue, breadcrumb) {
 	$.isLoading({ text: "Loading" });
 	diameter = $("#svg-container").width();
-	if (diameter > $(".svg-row").height()) diameter =  $(".svg-row").height();
-	trans = "translate(" + diameter * 0.5 + "," + diameter * 0.5 + ")";
+	if (diameter > $(".svg-row").height()) diameter = $(".svg-row").height();
+	trans = "translate(" + diameter * 0.5 + "," + diameter * 0.45 + ")";
 	
 	var gwas = $("#gwas").val();
 	var region = $("#regionSearch").val();
@@ -289,7 +289,7 @@ function renderHic(term, tissue, breadcrumb) {
 		}
 		bt['hilight'] = 1;
 		
-		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter)
+		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter+50)
 		.on("mouseup", function(d) {
 				if (selecting){
 					selecting = 0;
@@ -415,11 +415,13 @@ function renderHic(term, tissue, breadcrumb) {
 			.text("chr"+CHR)
 			.attr("dy", "-.35em")
 			.attr("text-anchor", "middle")
-			.attr("transform", "translate(" + diameter * 0.5 + ","+ ((diameter * 0.5) - (diameter * 0.4)) +")")
+			.attr("transform", "translate(" + diameter * 0.5 + ","+ ((diameter * 0.45) - (diameter * 0.4)) +")")
 			
 		for(var t in tissues) {
 			$("#"+t+"_count").text("("+tissues[t]+")");
 		}
+		
+		addGeneKey();
 		
 		$.isLoading( "hide" );
 		// end of JSON call     
@@ -903,6 +905,43 @@ function pathDetails(interactions){
 					pos.top = e.pageY
 					pos.left = e.pageX
 		}).tipsy({ gravity: $.fn.tipsy.autoNSEW, opacity: 1, html: true, pos: pos, offset: 5, className: 'hicScore' }); });
+}
+
+function addGeneKey(){
+	var vis = d3.select("#main-svg");
+	
+	var scale_group = vis.append("g").attr("class", "genes key")
+		.attr("id", "geneKey").selectAll("svg")
+		.data(["protein_coding","lincRNA","snoRNA","antisense","miRNA","snRNA","pseudogene","misc_RNA","processed_transcript"]).enter();
+		
+	scale_group.append("rect")
+			.attr("x", function(d, i) { 
+				if (i%2)
+					return (60*i)-60
+				else
+					return 60*i
+			})
+			.attr("y", function(d, i) { return (i%2) * 30 })
+			.attr("width", 20).attr("height", 20)
+		.attr("class", function(d){
+				return d;
+		})
+		
+	scale_group.append("text")
+		.attr("x", 25)
+		.attr("x", function(d,i) { 
+				if (i%2)
+					return 25+(60*i)-60
+				else
+					return 25+60*i				
+		})
+		.attr("y", function(d, i) { return 15 + (i%2) * 30 })
+		.text(function (d) {
+				return d.replace("_", " ");
+		});	
+		
+	vis.selectAll("g.key")
+		.attr("transform", function(){ width = $(this)[0].getBBox().width; return "translate("+((diameter*0.5) - (width*0.5))+","+(diameter - (diameter*0.05))+")"} );
 }
 
 function drawRegionPanel(type, chr, start, end, maxscore) {	
