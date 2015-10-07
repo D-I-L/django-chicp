@@ -96,7 +96,7 @@
 				<ol class="breadcrumb no-print" id="breadcrumb">
 					<li><a href="/chicp/">Start</a></li>
 				</ol>
-				<div class="row svg-row">
+				<div class="row svg-row" style="max-height:720px;">
 					<div class="col-sm-12 col-lg-6">
 						<div id="svg-container"></div>
 					</div>
@@ -269,7 +269,6 @@
 				d3.select("#svg-container").selectAll(".track.snps").remove();
 		        var totalBP = data.meta.rend - data.meta.rstart;
 		        META = data.meta;
-		        console.log(META)
 				addSNPTrack(data.snps, data.snp_meta);
 		        addSNPTrackPoints(data.snps, data.snp_meta, totalBP);
 		        $("#snp_track_header").html("SNP Data: "+$('#gwas option:selected').text());
