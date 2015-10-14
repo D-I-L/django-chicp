@@ -286,6 +286,8 @@
 			var term = $("#search_term").val();
 			var tissue = $("input:radio[name=tissue]:checked").val();
 			var gwas = $("#gwas").val();
+
+	        $(".page-header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
 			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
