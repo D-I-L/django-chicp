@@ -6,7 +6,7 @@ class ChicpeaTestCase(TestCase):
 
     def test_page(self):
         ''' Test the main chicpea page. '''
-        resp = self.client.get(reverse('chicpea'))
+        resp = self.client.get(reverse('chicp:chicp'))
         self.assertEqual(resp.status_code, 200)
         # check we've used the right template
-        self.assertTemplateUsed(resp, 'chicpea/index.html')
+        self.assertTemplateUsed(resp, 'chicp/index.html')
