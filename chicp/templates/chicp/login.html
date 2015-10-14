@@ -1,0 +1,39 @@
+{% block content %}
+
+{% if user.is_authenticated and user.username != 'AnonymousUser' %}
+				  	<li><a id='logout_link' href="/accounts/logout">Logout ({{ user }})</a></li>
+{% else %}
+<li class="dropdown">
+					<a href="#" data-toggle="dropdown" class="dropdown-toggle"><i class="fa fa-sign-in"></i>&nbsp; Login<b class="caret"></b></a>
+						<ul class="dropdown-menu" style="padding:15px;min-width:250px">
+							<li>
+	                           <div class="row">
+	                              <div class="col-md-12">
+	                                 <form class="form" role="form" method="POST" action="{% url 'accounts:pydgin_auth.views.login_user' %}" accept-charset="UTF-8" id="login-nav">
+	                                    {% csrf_token %}
+	                                    <div class="form-group">
+	                                       <label class="sr-only" for="username">Username</label>
+	                                       <input type="text" class="form-control" name="username" id="username" placeholder="Username" required>
+	                                    </div>
+	                                    <div class="form-group">
+	                                       <label class="sr-only" for="password">Password</label>
+	                                       <input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
+	                                    </div>
+	                                    <div class="checkbox">
+	                                       <label><input type="checkbox" name="remember_me" id="remember_me" checked="checked" value="1"> Remember me</label>
+	                                    </div>
+	                                    <div class="form-group">
+	                                       <button type="submit" class="btn btn-primary btn-block" name="submit" value="Login" >Login</button>
+	                                    </div>
+	                                 </form>
+	                                 <p><a href="/accounts/user/password/reset/">Forgotten password? Click here.</a>
+	                                 <p><a href="/accounts/register">New Users..Click here to Register</a>
+	                              </div>
+	                           </div>
+	                        </li>
+						</ul>
+</li>
+{% endif %}
+{% endblock %}
+
+ 
