@@ -5,6 +5,7 @@ from django.test.client import RequestFactory
 from chicp import chicp_settings
 from chicp import utils
 from chicp.views import chicpea, chicpeaSearch
+from elastic.elastic_settings import ElasticSettings
 from elastic.search import Search
 
 
@@ -12,7 +13,8 @@ class ChicpeaTestCase(TestCase):
     def setUp(self):
         # Every test needs access to the request factory.
         self.factory = RequestFactory()
-        for idx in getattr(chicp_settings, 'TARGET_IDXS'):
+        for target in getattr(chicp_settings, 'CP_TARGET'):
+            idx = ElasticSettings.idx('CP_TARGET_'+target)
             elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
             tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
             utils.tissues[idx] = tissueList
