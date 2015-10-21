@@ -346,7 +346,7 @@
 				if (r == true) {
 					$.isLoading({ text: "Loading" });
 	                var formData = new FormData();
-	                formData.append("userDataIdx", id.replace('userdata-',''));
+	                formData.append("userDataIdx", id.replace('ud-',''));
 	                formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
 					$.ajax({
 	                	url: "deleteUserData",
@@ -410,9 +410,9 @@
 	                		userSettings = $("#userSettings");
 	                		for (i = 0; i < data.userSNPTracks.length; i++) {
 	                			f = data.userSNPTracks[i]
-	                			localStorage["userdata-"+f.value] = f.text
-	                			optGroup.append('<option value="userdata-'+f.value+'">'+f.text+'</option>');
-	                			userSettings.append('<li class="deleteUD" id="userdata-'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
+	                			localStorage["ud-"+f.value] = f.text
+	                			optGroup.append('<option value="ud-'+f.value+'">'+f.text+'</option>');
+	                			userSettings.append('<li class="deleteUD" id="ud-'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
 	                		}
 	        		        $.isLoading( "hide" );
 	                	},
@@ -458,7 +458,7 @@
 	    		optGroup.empty();
 	    		userSettings.empty();
 	    		for (var i = 0; i < localStorage.length; i++){
-	    			if (localStorage.key(i).match(/userdata-/g)){
+	    			if (localStorage.key(i).match(/ud-/g)){
 	    				//console.log(localStorage.key(i))
 	    				optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
 	    				userSettings.append('<li class="deleteUD" id="'+localStorage.key(i)+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+localStorage.getItem(localStorage.key(i))+'</li>');

@@ -20,6 +20,7 @@ from chicp import utils
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
 from elastic.search import Search, ElasticQuery
+from elastic.exceptions import SettingsError
 
 
 # Get an instance of a logger
@@ -46,12 +47,14 @@ def chicpea(request):
         context['tissue'] = queryDict.get("tissue")
     else:
         context['default_target'] = getattr(chicp_settings, 'DEFAULT_TARGET')
+        print("default target = "+context['default_target'])
         context['default_tissue'] = getattr(chicp_settings, 'DEFAULT_TISSUE')
 
     indexes = list()
     tissues = list()
-    for idx in getattr(chicp_settings, 'TARGET_IDXS'):
-        indexes.append({"value": idx, "text": getattr(chicp_settings, 'TARGET_IDXS').get(idx)})
+    for target in getattr(chicp_settings, 'CP_TARGET'):
+        idx = ElasticSettings.idx('CP_TARGET_'+target)
+        indexes.append({"value": idx, "text": ElasticSettings.get_label('CP_TARGET_'+target)})
         elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
         tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
         utils.tissues[idx] = tissueList
@@ -63,15 +66,14 @@ def chicpea(request):
 
     snpTracks = OrderedDict()
     defaultTrack = getattr(chicp_settings, 'DEFAULT_TRACK')
-    for group in getattr(chicp_settings, 'CHICP_IDX'):
+    for group in getattr(chicp_settings, 'CP_STATS'):
+        idx = ElasticSettings.idx('CP_STATS_'+group)
         snp_tracks = list()
-        for track in getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS'):
-            snp_tracks.append({"value": track,
-                               "text":  getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS')
-                               .get(track).get('NAME')})
+        for track, details in (ElasticSettings.get_idx_types(idx_name='CP_STATS_'+group, user='None')).items():
+            snp_tracks.append({"value": track.lower(), "text": details['label']})
             if defaultTrack == '':
-                defaultTrack = getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS').get(track).get('NAME')
-        snpTracks[getattr(chicp_settings, 'CHICP_IDX').get(group).get('NAME')] = snp_tracks
+                defaultTrack = track.lower()
+        snpTracks[ElasticSettings.get_label('CP_STATS_'+group)] = snp_tracks
     context['snpTracks'] = snpTracks
 
     if queryDict.get("snp_track"):
@@ -79,8 +81,6 @@ def chicpea(request):
     else:
         context['snp_track'] = defaultTrack
 
-    # return render(request, 'chicp/index3.html', context, content_type='text/html')
-    # return render(request, 'chicp/index2.html', context, content_type='text/html')
     return render(request, 'chicp/index.html', context, content_type='text/html')
 
 
@@ -89,7 +89,7 @@ def chicpeaFileUpload(request, url):
     files = filesDict.getlist("files[]")
     print(files)
     snpTracks = list()
-    idx = getattr(chicp_settings, 'CHICP_IDX').get('userdata').get('INDEX')
+    idx = ElasticSettings.idx('CP_STATS_UD')
 
     for f in files:
         line = f.readlines()[0].decode()
@@ -123,7 +123,7 @@ def chicpeaFileUpload(request, url):
 def chicpeaDeleteUD(request, url):
     queryDict = request.POST
     idx_type = queryDict.get("userDataIdx")
-    idx = getattr(chicp_settings, 'CHICP_IDX').get('userdata').get('INDEX')
+    idx = ElasticSettings.idx('CP_STATS_UD')
     output = subprocess.check_output("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'", shell=True)
     return HttpResponse(output, content_type="application/json")
 
@@ -138,7 +138,8 @@ def chicpeaSearch(request, url):
     searchTerm = queryDict.get("searchTerm").upper()
 
     if targetIdx not in utils.tissues:
-        for idx in getattr(chicp_settings, 'TARGET_IDXS'):
+        for target in getattr(chicp_settings, 'CP_TARGET'):
+            idx = ElasticSettings.idx('CP_TARGET_'+target)
             elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
             tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
             utils.tissues[idx] = tissueList
@@ -374,6 +375,8 @@ def _build_hic_query(query, targetIdx, segmin=0, segmax=0):
 
     hicElastic = Search(query, idx=targetIdx, search_from=0, size=2000)
     hicResult = hicElastic.get_result()
+    # hicResult2 = Search(query, idx=targetIdx, search_from=0, size=2000).search()
+    # print(hicResult2.docs)
     if len(hicResult['data']) > 0:
         hic = hicResult['data']
         if segmin == 0 or segmax == 0:
@@ -421,16 +424,13 @@ def _build_exon_query(chrom, segmin, segmax, genes):
 def _find_snp_position(snp_track, name):
     mo = re.match(r"(.*)-(.*)", snp_track)
     (group, track) = mo.group(1, 2)
-    snp_track_idx = getattr(chicp_settings, 'CHICP_IDX').get(group).get('INDEX')
-    snp_track_type = ''
-    if getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS').get(snp_track):
-        snp_track_type = getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS') \
-            .get(snp_track).get('TYPE')
-    else:
-        snp_track_type = track
+    try:
+        snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper(), snp_track.upper())
+    except SettingsError:
+        snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper())+"/"+track
 
     query = ElasticQuery.query_match("name", name)
-    elastic = Search(query, idx=snp_track_idx+'/'+snp_track_type)
+    elastic = Search(query, idx=snp_track_idx)
     snpResult = elastic.get_result()
     if (len(snpResult['data']) > 0):
         chrom = snpResult['data'][0]['seqid'].replace('chr', "")
@@ -447,28 +447,23 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
         # get SNPs based on this segment
         mo = re.match(r"(.*)-(.*)", snp_track)
         (group, track) = mo.group(1, 2)
-        snp_track_idx = getattr(chicp_settings, 'CHICP_IDX').get(group).get('INDEX')
-        snp_track_type = ''
-        if getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS').get(snp_track):
-            snp_track_type = getattr(chicp_settings, 'CHICP_IDX').get(group).get('TRACKS') \
-                .get(snp_track).get('TYPE')
-        else:
-            snp_track_type = track
+        try:
+            snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper(), snp_track.upper())
+        except SettingsError:
+            snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper())+"/"+track
 
         query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                       Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                       utils.snpFields)
-        snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx+'/'+snp_track_type)
+        snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx)
 
         snpResult = snpQuery.get_result()
         snps = snpResult['data']
         snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
 
-        data_type = getattr(chicp_settings, 'CHICP_IDX').get(group).get('DATA_TYPE')
+        data_type = ElasticSettings.get_label('CP_STATS_'+group.upper(), None, "data_type")
         snpSettings = getattr(chicp_settings, 'STUDY_DEFAULTS').get(data_type)
-#        if 'max' in snpSettings:
-#            maxScore = float(snpSettings['max'])
-#        else:
+
         for s in snps:
             if float(s['score']) > maxScore:
                 maxScore = float(s['score'])
