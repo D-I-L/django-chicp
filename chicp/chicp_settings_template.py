@@ -24,22 +24,25 @@ ELASTIC = {
                 'name': '',
                 'label': 'User Data',
                 'idx_type': {},
+                'data_type': 'log10p',
                 },
             'CP_STATS_IC': {
                 'name': '',
                 'label': 'ImmunoChip',
                 'idx_type': {
                 },
+                'data_type': 'log10p',
             },
             'CP_STATS_GWAS': {
                 'name': '',
                 'label': 'GWAS Statistic',
                 'idx_type': {
                 },
+                'data_type': 'log10p',
             },
-            'TARGET_CHICAGO': {},
-            'TARGET_MIFSUD': {},
-            'TARGET_MARTIN': {},
+            'CP_TARGET_CHICAGO': {},
+            'CP_TARGET_MIFSUD': {},
+            'CP_TARGET_MARTIN': {},
         },
         'TEST': 'auto_tests',
         'REPOSITORY': 'my_backup',
