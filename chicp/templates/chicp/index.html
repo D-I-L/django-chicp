@@ -26,7 +26,7 @@
 				<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
 					<!-- <form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">-->
 					<input type="hidden" id="regionSearch" value="{{ region }}">
-					<div class="form-group">
+					<div class="form-group" style="width:100%">
 						<input type="text" class="form-control" placeholder="Search Term"
 							id="search_term" value="{{ searchTerm }}">
 						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
@@ -52,10 +52,11 @@
 							</div>
 						</div>
 					</div>
+					{% if snpTracks|length > 0 %}
 					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
 						<div class="panel-heading">Association Studies</div>
 						<div class="panel-body">
-							<div class="form-group">
+							<div class="form-group" style="width:100%">
 								<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
 								{% for group, tracks in snpTracks.items %}
 								{% if group == 'User Data' %}
@@ -70,13 +71,16 @@
 								{% endfor %}
 								</select>
 							</div>
+							{% if user.is_authenticated and user.username != 'AnonymousUser' %}
 							<div class="strike"><span>OR</span></div>
 							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicp/fileUpload">
 								{% csrf_token %}
 								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
 							</form>
+							{% endif %}
 						</div>
 					</div>
+					{% endif %}
 				</ul>
 {% endblock %}
 
@@ -367,11 +371,7 @@
 	                	error: function(e){
 	        		        $.isLoading( "hide" );
 	                	}
-	                });
-					
-					
-					
-					
+	                });	
 				}
 			});
 			
@@ -410,9 +410,9 @@
 	                		userSettings = $("#userSettings");
 	                		for (i = 0; i < data.userSNPTracks.length; i++) {
 	                			f = data.userSNPTracks[i]
-	                			localStorage["ud-"+f.value] = f.text
-	                			optGroup.append('<option value="ud-'+f.value+'">'+f.text+'</option>');
-	                			userSettings.append('<li class="deleteUD" id="ud-'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
+	                			localStorage[f.value] = f.text
+	                			optGroup.append('<option value="'+f.value+'">'+f.text+'</option>');
+	                			userSettings.append('<li class="deleteUD" id="'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
 	                		}
 	        		        $.isLoading( "hide" );
 	                	},
