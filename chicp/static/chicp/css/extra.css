@@ -67,6 +67,10 @@ body {
 	background-color: #428bca;
 }
 
+.username{
+	text-transform: lowercase;
+}
+
 /*
  * Main content
  */
