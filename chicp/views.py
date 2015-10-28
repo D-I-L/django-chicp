@@ -5,6 +5,8 @@ import operator
 import os
 import re
 import subprocess
+from operator import itemgetter
+
 from cairosvg import svg2pdf, svg2png
 from svgutils.templates import VerticalLayout, ColumnLayout
 from svgutils.transform import fromstring
@@ -14,6 +16,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.http.response import JsonResponse, HttpResponse
 from django.shortcuts import render
+from django.utils import timezone
 
 from chicp import chicp_settings
 from chicp import utils
@@ -21,6 +24,7 @@ from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
 from elastic.search import Search, ElasticQuery
 from elastic.exceptions import SettingsError
+from pydgin_auth.permissions import get_authenticated_idx_and_idx_types
 
 
 # Get an instance of a logger
@@ -37,6 +41,7 @@ def chicpeaDocs(request):
 
 def chicpea(request):
     queryDict = request.GET
+    user = request.user
     context = dict()
     context['title'] = 'Capture HiC Plotter'
     context['searchTerm'] = 'IL2RA'
@@ -47,33 +52,40 @@ def chicpea(request):
         context['tissue'] = queryDict.get("tissue")
     else:
         context['default_target'] = getattr(chicp_settings, 'DEFAULT_TARGET')
-        print("default target = "+context['default_target'])
         context['default_tissue'] = getattr(chicp_settings, 'DEFAULT_TISSUE')
+
+    (idx_keys_auth, idx_type_keys_auth) = get_authenticated_idx_and_idx_types(
+                                            user=user, idx_keys=None, idx_type_keys=None)
 
     indexes = list()
     tissues = list()
     for target in getattr(chicp_settings, 'CP_TARGET'):
-        idx = ElasticSettings.idx('CP_TARGET_'+target)
-        indexes.append({"value": idx, "text": ElasticSettings.get_label('CP_TARGET_'+target)})
-        elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
-        tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
-        utils.tissues[idx] = tissueList
+        if 'CP_TARGET_'+target not in idx_keys_auth:
+            continue
+        indexes.append({"value": target, "text": ElasticSettings.get_label('CP_TARGET_'+target)})
+        elasticJSON = Search(idx=ElasticSettings.idx('CP_TARGET_'+target)).get_mapping(mapping_type="gene_target")
+        tissueList = list(elasticJSON[ElasticSettings.idx('CP_TARGET_'+target)]
+                          ['mappings']['gene_target']['_meta']['tissue_type'].keys())
+        utils.tissues['CP_TARGET_'+target] = tissueList
         tissueList.sort()
         for t in tissueList:
-            tissues.append({"value": t, "text": t.replace("_", " "), "class": idx})
+            tissues.append({"value": t, "text": t.replace("_", " "), "class": target})
     context['allIndexes'] = indexes
     context['allTissues'] = tissues
 
     snpTracks = OrderedDict()
     defaultTrack = getattr(chicp_settings, 'DEFAULT_TRACK')
     for group in getattr(chicp_settings, 'CP_STATS'):
-        idx = ElasticSettings.idx('CP_STATS_'+group)
+        if 'CP_STATS_'+group not in idx_keys_auth:
+            continue
         snp_tracks = list()
         for track, details in (ElasticSettings.get_idx_types(idx_name='CP_STATS_'+group, user='None')).items():
+            if 'CP_STATS_'+group+'.'+track not in idx_type_keys_auth:
+                continue
             snp_tracks.append({"value": track.lower(), "text": details['label']})
             if defaultTrack == '':
                 defaultTrack = track.lower()
-        snpTracks[ElasticSettings.get_label('CP_STATS_'+group)] = snp_tracks
+        snpTracks[ElasticSettings.get_label('CP_STATS_'+group)] = sorted(snp_tracks, key=itemgetter('text'))
     context['snpTracks'] = snpTracks
 
     if queryDict.get("snp_track"):
@@ -86,8 +98,8 @@ def chicpea(request):
 
 def chicpeaFileUpload(request, url):
     filesDict = request.FILES
+    user = request.user
     files = filesDict.getlist("files[]")
-    print(files)
     snpTracks = list()
     idx = ElasticSettings.idx('CP_STATS_UD')
 
@@ -109,10 +121,12 @@ def chicpeaFileUpload(request, url):
         bedFile.write(f.read())
         bedFile.close()
         idx_type = os.path.basename(bedFile.name)
-        snpTracks.append({"value": idx_type, "text":  f.name})
+        snpTracks.append({"value": "ud-"+idx_type, "text":  f.name})
         os.system("curl -XDELETE '"+ElasticSettings.url()+"/"+idx+"/"+idx_type+"'")
         call_command("index_search", indexName=idx, indexType=idx_type, indexBED=bedFile.name)
-        logger.debug("--indexName "+idx+" --indexType "+idx_type+" --indexBED "+bedFile.name)
+        logger.debug("index_search --indexName "+idx+" --indexType "+idx_type+" --indexBED "+bedFile.name)
+        os.system("curl -XPUT "+ElasticSettings.url()+"/"+idx+"/"+idx_type+"/_meta -d '{\"label\": \"" + f.name +
+                  "\", \"owner\": \""+user.username+"\", \"uploaded\": \""+str(timezone.now())+"\"}'")
         bedFile.delete
 
     context = dict()
@@ -136,19 +150,35 @@ def chicpeaDeleteUD(request, url):
 
 def chicpeaSearch(request, url):
     queryDict = request.GET
+    user = request.user
     targetIdx = queryDict.get("targetIdx")
     blueprint = {}
     hic = []
     addList = []
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
+    snpTrack = queryDict.get("snp_track")
+
+    (idx_keys_auth, idx_type_keys_auth) = get_authenticated_idx_and_idx_types(
+                                            user=user, idx_keys=None, idx_type_keys=None)
+
+    if snpTrack:
+        mo = re.match(r"(.*)-(.*)", snpTrack)
+        (group, track) = mo.group(1, 2)  # @UnusedVariable
+        if group != 'ud' and 'CP_STATS_'+group.upper()+'.'+snpTrack.upper() not in idx_type_keys_auth:
+            snpTrack = None
 
     if targetIdx not in utils.tissues:
         for target in getattr(chicp_settings, 'CP_TARGET'):
-            idx = ElasticSettings.idx('CP_TARGET_'+target)
-            elasticJSON = Search(idx=idx).get_mapping(mapping_type="gene_target")
-            tissueList = list(elasticJSON[idx]['mappings']['gene_target']['_meta']['tissue_type'].keys())
-            utils.tissues[idx] = tissueList
+            if 'CP_TARGET_'+target not in idx_keys_auth:
+                if targetIdx == target:
+                    retJSON = {'error': 'Sorry, you do not have permission to view this dataset.'}
+                    return JsonResponse(retJSON)
+                continue
+            elasticJSON = Search(idx=ElasticSettings.idx('CP_TARGET_'+target)).get_mapping(mapping_type="gene_target")
+            tissueList = list(elasticJSON[ElasticSettings.idx('CP_TARGET_'+target)]
+                              ['mappings']['gene_target']['_meta']['tissue_type'].keys())
+            utils.tissues['CP_TARGET_'+target] = tissueList
 
     if queryDict.get("region") or re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")):
         searchType = 'region'
@@ -162,7 +192,7 @@ def chicpeaSearch(request, url):
         chrom = chrom.replace('chr', "")
     if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
         searchTerm = queryDict.get("searchTerm").lower()
-        addList.append(_find_snp_position(queryDict.get("snp_track"), searchTerm))
+        addList.append(_find_snp_position(snpTrack, searchTerm))
         if addList[0].get("error"):
             return JsonResponse({'error': addList[0]['error']})
         position = addList[0]['end']
@@ -197,8 +227,9 @@ def chicpeaSearch(request, url):
                                 BoolQuery(must_arr=[RangeQuery("oeStart", gte=segmin, lte=segmax),
                                                     RangeQuery("oeEnd", gte=segmin, lte=segmax)])])
 
-        query = ElasticQuery.filtered_bool(query_bool, filter_bool, sources=utils.hicFields + utils.tissues[targetIdx])
-        (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)
+        query = ElasticQuery.filtered_bool(query_bool, filter_bool,
+                                           sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
+        (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)  # @UnusedVariable
         # print(hic)
 
         if len(hic) == 0:
@@ -222,7 +253,7 @@ def chicpeaSearch(request, url):
                                                     RangeQuery("oeEnd", gte=position)])])
 
             query = ElasticQuery.filtered_bool(query_bool, filter_bool,
-                                               sources=utils.hicFields + utils.tissues[targetIdx])
+                                               sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
             hic, segmin, segmax = _build_hic_query(query, targetIdx)
 
             if len(hic) == 0:
@@ -233,7 +264,7 @@ def chicpeaSearch(request, url):
         query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
         query_bool = _add_tissue_filter(query_bool, targetIdx)
         query = ElasticQuery.filtered_bool(Query.query_string(searchTerm, fields=["name", "ensg", "oeName"]),
-                                           query_bool, sources=utils.hicFields + utils.tissues[targetIdx])
+                                           query_bool, sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
 
         hic, segmin, segmax = _build_hic_query(query, targetIdx)
 
@@ -250,7 +281,7 @@ def chicpeaSearch(request, url):
 
     # get genes based on this segment
     genes = _build_gene_query(chrom, segmin, segmax)
-    (snps, snpMeta) = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    (snps, snpMeta) = _build_snp_query(snpTrack, chrom, segmin, segmax)
     frags = _build_frags_query(getattr(chicp_settings, 'DEFAULT_FRAG'), chrom, segmin, segmax)
 
     addList = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], addList)
@@ -262,7 +293,7 @@ def chicpeaSearch(request, url):
                         "rstart": 1,
                         "rend": int(segmax) - int(segmin),
                         "rchr": str(chrom),
-                        "tissues": utils.tissues[targetIdx]},
+                        "tissues": utils.tissues['CP_TARGET_'+targetIdx]},
                "snps": snps,
                "snp_meta": snpMeta,
                "genes": genes,
@@ -277,14 +308,25 @@ def chicpeaSearch(request, url):
 
 def chicpeaSubSearch(request, url):
     queryDict = request.GET
+    user = request.user
     tissue = queryDict.get("tissue")
     region = queryDict.get("region")
     mo = re.match(r"(.*):(\d+)-(\d+)", region)
     (chrom, segmin, segmax) = mo.group(1, 2, 3)
+    snpTrack = queryDict.get("snp_track")
+
+    (idx_keys_auth, idx_type_keys_auth) = get_authenticated_idx_and_idx_types(  # @UnusedVariable
+                                            user=user, idx_keys=None, idx_type_keys=None)
+
+    if snpTrack:
+        mo = re.match(r"(.*)-(.*)", snpTrack)
+        (group, track) = mo.group(1, 2)  # @UnusedVariable
+        if 'CP_STATS_'+group.upper()+'.'+snpTrack.upper() not in idx_type_keys_auth:
+            snpTrack = None
 
     genes = _build_gene_query(chrom, segmin, segmax)
     exons = _build_exon_query(chrom, segmin, segmax, genes)
-    (snps, snpMeta) = _build_snp_query(queryDict.get("snp_track"), chrom, segmin, segmax)
+    (snps, snpMeta) = _build_snp_query(snpTrack, chrom, segmin, segmax)
     blueprint = {}
 
     if getattr(chicp_settings, 'sampleLookup').get(tissue):
@@ -368,7 +410,7 @@ def chicpeaDownload(request, url):
 def _add_tissue_filter(bool_query, targetIdx):
 
     tissueFilter = list()
-    for t in utils.tissues[targetIdx]:
+    for t in utils.tissues['CP_TARGET_'+targetIdx]:
         tissueFilter.append(RangeQuery(t, gte=5))
 
     bool_query.should(tissueFilter)
@@ -378,13 +420,12 @@ def _add_tissue_filter(bool_query, targetIdx):
 def _build_hic_query(query, targetIdx, segmin=0, segmax=0):
 
     hic = []
-
-    hicElastic = Search(query, idx=targetIdx, search_from=0, size=2000)
-    hicResult = hicElastic.get_result()
-    # hicResult2 = Search(query, idx=targetIdx, search_from=0, size=2000).search()
-    # print(hicResult2.docs)
-    if len(hicResult['data']) > 0:
-        hic = hicResult['data']
+    hicElastic = Search(query, idx=ElasticSettings.idx('CP_TARGET_'+targetIdx), search_from=0, size=2000)
+    # hicResult = hicElastic.get_result()
+    hicResult = hicElastic.get_json_response()
+    if len(hicResult['hits']['hits']) > 0:
+        for hit in hicResult['hits']['hits']:
+            hic.append(hit['_source'])
         if segmin == 0 or segmax == 0:
             (segmin, segmax) = utils.segCoords(hic)
             extension = int(0.05*(segmax-segmin))
@@ -399,8 +440,12 @@ def _build_gene_query(chrom, segmin, segmax):
     geneQuery = Search.range_overlap_query(seqid=chrom, start_range=segmin, end_range=segmax, search_from=0,
                                            size=2000, idx=getattr(chicp_settings, 'CP_GENE_IDX')+'/genes/',
                                            field_list=utils.geneFields)
-    geneResult = geneQuery.get_result()
-    genes = geneResult['data']
+    # geneResult = geneQuery.get_result()
+    # genes = geneResult['data']
+    geneResult = geneQuery.get_json_response()
+    genes = []
+    for hit in geneResult['hits']['hits']:
+        genes.append(hit['_source'])
     genes = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], genes)
     genes = [utils.flattenAttr(o) for o in genes]
     for o in genes:
@@ -420,8 +465,12 @@ def _build_exon_query(chrom, segmin, segmax, genes):
             query = ElasticQuery.filtered_bool(Query.query_string(g["gene_id"], fields=["name"]),
                                                query_bool, sources=utils.snpFields)
             elastic = Search(query, idx=getattr(chicp_settings, 'CP_GENE_IDX')+'/exons/', search_from=0, size=2000)
-            result = elastic.get_result()
-            exons = result['data']
+            # result = elastic.get_result()
+            # exons = result['data']
+            result = elastic.get_json_response()
+            exons = []
+            for hit in result['hits']['hits']:
+                exons.append(hit['_source'])
             exons = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], exons)
             geneExons[g["gene_id"]] = sorted(exons, key=operator.itemgetter("start"))
     return geneExons
@@ -463,8 +512,12 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
                                       utils.snpFields)
         snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx)
 
-        snpResult = snpQuery.get_result()
-        snps = snpResult['data']
+        # snpResult = snpQuery.get_result()
+        # snps = snpResult['data']
+        snpResult = snpQuery.get_json_response()
+        snps = []
+        for hit in snpResult['hits']['hits']:
+            snps.append(hit['_source'])
         snps = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], snps)
 
         data_type = ElasticSettings.get_label('CP_STATS_'+group.upper(), None, "data_type")
@@ -487,8 +540,12 @@ def _build_frags_query(frags_idx, chrom, segmin, segmax):
                                   utils.bedFields)
     fragsQuery = Search(search_query=query, search_from=0, size=2000000, idx=frags_idx)
 
-    fragsResult = fragsQuery.get_result()
-    frags = fragsResult['data']
+    # fragsResult = fragsQuery.get_result()
+    # frags = fragsResult['data']
+    fragsResult = fragsQuery.get_json_response()
+    frags = []
+    for hit in fragsResult['hits']['hits']:
+        frags.append(hit['_source'])
     frags = utils.makeRelative(int(segmin), int(segmax), ['start', 'end'], frags)
     return frags
 
