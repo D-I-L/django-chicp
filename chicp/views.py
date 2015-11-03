@@ -131,6 +131,12 @@ def chicpeaFileUpload(request, url):
 
     context = dict()
     context['userSNPTracks'] = snpTracks
+
+    if 'pydgin_auth' in settings.INSTALLED_APPS:
+            from pydgin_auth.elastic_model_factory import ElasticPermissionModelFactory as elastic_factory
+            elastic_factory.create_idx_type_model_permissions(request.user, indexKey='CP_STATS_UD',
+                                                              indexTypeKey='UD-'+idx_type.upper())
+
     return HttpResponse(json.dumps(context), content_type="application/json")
 
 
