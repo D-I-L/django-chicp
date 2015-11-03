@@ -145,8 +145,18 @@
 				<div class="modal-body">
 					<!-- content goes here -->
 					<span id="scoreSliderValLabel">Interaction Score:&nbsp;</span><input id="scoreSliderInput" type="text" />&nbsp;<span id="scoreSliderVal">5</span>
+					{% if user.is_authenticated and user.username != 'AnonymousUser' %}
 					<h4>User Data Tracks</h4>
-					<ul id="userSettings" style="padding:0px; list-style:none;cursor:pointer;"></ul>
+					<ul id="userSettings" style="padding:0px; list-style:none;cursor:pointer;">
+					{% for group, tracks in snpTracks.items %}
+						{% if group == 'User Data' %}
+						{% for t in tracks %}
+						<li class="deleteUD" id="{{ t.value }}"><i class="fa fa-trash-o" id="DEL-{{ t.value }}"></i>&nbsp;{{ t.text }}</li>
+						{% endfor %}
+						{% endif %}					
+					{% endfor %}
+					</ul>
+					{% endif %}
 				</div>
 
 				<div class="modal-footer">
@@ -360,7 +370,7 @@
 	                	contentType: false,   // tell jQuery not to set contentType
 	                	success: function(data){
 	                		if(data.acknowledged){
-	                			localStorage.removeItem(id);
+	                			// localStorage.removeItem(id);
 	                			optGroup = $("#userData");			
 	                			optGroup.find('option[value="'+id+'"]').remove();
 	                			userSettings = $("#userSettings");
@@ -410,9 +420,10 @@
 	                		userSettings = $("#userSettings");
 	                		for (i = 0; i < data.userSNPTracks.length; i++) {
 	                			f = data.userSNPTracks[i]
-	                			localStorage[f.value] = f.text
+	                			// localStorage[f.value] = f.text
 	                			optGroup.append('<option value="'+f.value+'">'+f.text+'</option>');
-	                			userSettings.append('<li class="deleteUD" id="'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
+	                			userSettings.append('<li class="deleteUD" id="'+f.value+'">'+
+	                			'<i class="fa fa-trash-o" id="DEL-'+f.value+'"></i>&nbsp;'+f.text+'</li>');
 	                		}
 	        		        $.isLoading( "hide" );
 	                	},
@@ -450,10 +461,10 @@
 				zindex: 100,
 			});
 
-			if ($.cookie('cb-enabled') == 'enabled' || $.cookie('cb-enabled') == 'accepted'){
+/*			if ($.cookie('cb-enabled') == 'enabled' || $.cookie('cb-enabled') == 'accepted'){
 				showCookieProtected();
 			
-	    		optGroup = $("#userData");
+				optGroup = $("#userData");
 	    		userSettings = $("#userSettings");
 	    		optGroup.empty();
 	    		userSettings.empty();
@@ -465,6 +476,8 @@
 	    			}
 	    		}
 			}
+			*/		
+
 			
 			function showCookieProtected(){
 				var styleSheetList = document.styleSheets;
