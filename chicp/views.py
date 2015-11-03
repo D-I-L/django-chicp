@@ -224,7 +224,6 @@ def chicpeaSearch(request, url):
         query = ElasticQuery.filtered_bool(query_bool, filter_bool,
                                            sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)  # @UnusedVariable
-        # print(hic)
 
         if len(hic) == 0:
             retJSON = {'error': queryDict.get("searchTerm")+' does not overlap any bait/target regions in this dataset.'}
@@ -471,20 +470,32 @@ def _build_exon_query(chrom, segmin, segmax, genes):
 
 
 def _find_snp_position(snp_track, name):
-    mo = re.match(r"(.*)-(.*)", snp_track)
-    (group, track) = mo.group(1, 2)
-    try:
-        snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper(), snp_track.upper())
-    except SettingsError:
-        snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper())+"/"+track
+    if snp_track is None:
+        query = ElasticQuery.query_match("id", name)
+        elastic = Search(query, idx=ElasticSettings.idx('MARKER'))
+        snpResult = elastic.get_json_response()
+        if(len(snpResult['hits']['hits'])) > 0:
+            snp = snpResult['hits']['hits'][0]['_source']
+            chrom = snp['seqid'].replace('chr', "")
+            position = snp['start']
+            return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+    else:
+        mo = re.match(r"(.*)-(.*)", snp_track)
+        (group, track) = mo.group(1, 2)
+        try:
+            snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper(), snp_track.upper())
+        except SettingsError:
+            snp_track_idx = ElasticSettings.idx('CP_STATS_'+group.upper())+"/"+track
 
-    query = ElasticQuery.query_match("name", name)
-    elastic = Search(query, idx=snp_track_idx)
-    snpResult = elastic.get_result()
-    if (len(snpResult['data']) > 0):
-        chrom = snpResult['data'][0]['seqid'].replace('chr', "")
-        position = snpResult['data'][0]['end']
-        return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+        query = ElasticQuery.query_match("name", name)
+        elastic = Search(query, idx=snp_track_idx)
+        snpResult = elastic.get_json_response()
+        if(len(snpResult['hits']['hits'])) > 0:
+            snp = snpResult['hits']['hits'][0]['_source']
+            chrom = snp['seqid'].replace('chr', "")
+            position = snp['start']
+            return {'chr': chrom, 'start': (position-1), 'end': position, 'name': name}
+
     return {'error': 'Marker '+name+' does not exist in the currently selected dataset'}
 
 
