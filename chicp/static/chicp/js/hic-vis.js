@@ -134,12 +134,10 @@ function computePath(start, end, r, totalBP, diameter) {
 function computeStrandPath(start, end, r, totalBP, flag) {
     startcoords = computeCartesian(r, start, totalBP);
     endcoords = computeCartesian(r, end, totalBP);
-    //var flag = "0,1";
     if (undefined === flag){
-    	flag = "0,1";    	
-		if ((end - start) /totalBP > 0.5){
+    	flag = "0,1";
+		if ((end - start - ((angleOffset/350)*totalBP)) /totalBP > 0.5){
 			flag = "1,1";
-		// flag = "0,0";
 		}
     }
     return ("M" + startcoords.x + "," + startcoords.y +
@@ -233,13 +231,12 @@ function renderHic(term, tissue, breadcrumb) {
 						var t = $(this).find("input").val();
 						$("#"+t+"_count").text("(0)")
 				});
+				d3.select("#svg-container").selectAll("*").remove();
 				div = d3.select("#svg-container")
 				.append("div")
 				.html("<h1>"+json.error+"</h1>")
 				.attr("id", "message")
-				.style("width", "100%")
-				.style("text-align", "center")
-				.style("padding-top", "200px");
+				.attr("class", "chicp_msg");
 			
 			$.isLoading( "hide" );
 			return;
@@ -266,13 +263,12 @@ function renderHic(term, tissue, breadcrumb) {
 		
 		var hics = data.hic;
 		if (hics.length == 0) {
+			d3.select("#svg-container").selectAll("*").remove();
 			div = d3.select("#svg-container")
 				.append("div")
 				.html("<h1>No interactions found</h1>")
 				.attr("id", "message")
-				.style("width", "100%")
-				.style("text-align", "center")
-				.style("padding-top", "200px");
+				.attr("class", "chicp_msg");
 			$.isLoading( "hide" );
 			return;
 		}
@@ -289,7 +285,8 @@ function renderHic(term, tissue, breadcrumb) {
 		}
 		bt['hilight'] = 1;
 		
-		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter+50)
+		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg")
+		.style("padding-top", "10px").attr("width", diameter).attr("height", diameter+50)
 		.on("mouseup", function(d) {
 				if (selecting){
 					selecting = 0;
@@ -302,14 +299,14 @@ function renderHic(term, tissue, breadcrumb) {
 		});
 		
 		vis.append("text")
-			.attr("x", 0).attr("y", 0)
+			.attr("x", 0).attr("y", -20)
 			.attr("text-anchor", "left")  
 			.style("font-size", "20px")
 			.attr("class", "page-header svg_only")
 			.text($("#page_header").html());
 		
 		vis.append("text")
-			.attr("x", 0).attr("y", 20)
+			.attr("x", 0).attr("y", 0)
 			.attr("text-anchor", "left")
 			.style("font-size", "14px")
 			.style("font-style", "italic")
@@ -1273,15 +1270,15 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 		s2 = parseInt(selectedArray[selectedArray.length-1].id.replace("seg", ""))
 		var l1 = (s1-angleOffset) * (pi/180) * innerRadius
 		var l2 = s2 * (pi/180) * innerRadius
-		var p1 = Math.ceil(start+(l1*(totalBP/circAvail)))
-		var p2 = Math.ceil(start+(l2*(totalBP/circAvail)))
+		var p1 = Math.ceil(META.ostart+(l1*(totalBP/circAvail)))
+		var p2 = Math.ceil(META.ostart+(l2*(totalBP/circAvail)))
 		var region = CHR+":"+p1+"-"+p2;
+		console.log(region)
 		var gwas = $("#gwas").val();
 		var tissue = $("input:radio[name=tissue]:checked").val();
 		$("#regionSearch").val(region);
 		var term = $("#search_term").val();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+		renderHic(term, tissue, 1);
 		$("#regionSearch").val("");
 	}
 }
