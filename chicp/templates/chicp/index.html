@@ -346,6 +346,18 @@
 				d3.select("#svg-container").selectAll(".middle.hic").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
+	    		
+				if (data.error) {
+					$.isLoading( "hide" ); 
+					div = d3.select("#svg-container")
+						.insert("div",":first-child")
+						.html("<h1>"+data.error+"</h1>")
+						.attr("id", "message")
+						.style("width", "100%")
+						.style("text-align", "center");
+					return;
+				}
+				
 		        var totalBP = data.meta.rend - data.meta.rstart;
 		        META = data.meta;
 		        var hics = data.hic;
