@@ -67,10 +67,6 @@ body {
 	background-color: #428bca;
 }
 
-.username{
-	text-transform: lowercase;
-}
-
 /*
  * Main content
  */
@@ -277,40 +273,43 @@ svg .genes path.line { stroke-width: 0; fill: none;}
 svg .updateClick { stroke: yellow !important; stroke-width: 6px !important; }
 svg .segSelect { opacity: 0.3; }
 
-svg .genes path.hilight { stroke: yellow; }
-svg .genes path.misc_RNA { stroke: #ff7f0e; }
+/* svg .genes path.hilight { stroke: yellow; } */
+svg .genes path.hilight { stroke: #77ec17; }
+svg .genes path.misc_RNA { stroke: #000000; }
 svg .genes path.protein_coding { stroke: #1f77b4; }
-svg .genes path.lincRNA { stroke: #2ca02c; }
+svg .genes path.lincRNA { stroke: #ff7f0e; }
 svg .genes path.snoRNA { stroke: #d62728; }
 svg .genes path.antisense { stroke: #9467bd; }
 svg .genes path.miRNA { stroke: #e377c2; }
 svg .genes path.snRNA { stroke: #8c564b; }
 svg .genes path.pseudogene { stroke: #7f7f7f; }
-svg .genes path.processed_transcript { stroke: #bcbd22; }
+svg .genes path.processed_transcript { stroke: #008000; }
 
-svg .genes path.line.hilight { fill: yellow; }
-svg .genes path.line.misc_RNA, rect.misc_RNA { fill: #ff7f0e; }
+/* svg .genes path.line.hilight { fill: yellow; } */
+svg .genes path.line.hilight { fill: #77ec17; }
+svg .genes path.line.misc_RNA, rect.misc_RNA { fill: #000000; }
 svg .genes path.line.protein_coding, rect.protein_coding { fill: #1f77b4; }
-svg .genes path.line.lincRNA, rect.lincRNA { fill: #2ca02c; }
+svg .genes path.line.lincRNA, rect.lincRNA { fill: #ff7f0e; }
 svg .genes path.line.snoRNA, rect.snoRNA { fill: #d62728; }
 svg .genes path.line.antisense, rect.antisense { fill: #9467bd; }
 svg .genes path.line.miRNA, rect.miRNA { fill: #e377c2; }
 svg .genes path.line.snRNA, rect.snRNA { fill: #8c564b; }
 svg .genes path.line.pseudogene, rect.pseudogene { fill: #7f7f7f; }
-svg .genes path.line.processed_transcript, rect.processed_transcript { fill: #bcbd22; }
+svg .genes path.line.processed_transcript, rect.processed_transcript { fill: #008000; }
 
 svg .exon path.line.tss { stroke-width:2px; fill: white }
                 
-svg .arrow_heads path.hilight { fill: yellow; }
-svg .arrow_heads path.misc_RNA { fill: #ff7f0e; }
+/* svg .arrow_heads path.hilight { fill: yellow; } */
+svg .arrow_heads path.hilight { fill: #77ec17; }
+svg .arrow_heads path.misc_RNA { fill: #000000; }
 svg .arrow_heads path.protein_coding { fill: #1f77b4; }
-svg .arrow_heads path.lincRNA { fill: #2ca02c; }
+svg .arrow_heads path.lincRNA { fill: #ff7f0e; }
 svg .arrow_heads path.snoRNA { fill: #d62728; }
 svg .arrow_heads path.antisense { fill: #9467bd; }
 svg .arrow_heads path.miRNA { fill: #e377c2; }
 svg .arrow_heads path.snRNA { fill: #8c564b; }
 svg .arrow_heads path.pseudogene { fill: #7f7f7f; }
-svg .arrow_heads path.processed_transcript { fill: #bcbd22; }
+svg .arrow_heads path.processed_transcript { fill: #008000; }
 
 
 
