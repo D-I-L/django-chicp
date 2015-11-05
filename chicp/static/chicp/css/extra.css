@@ -169,6 +169,11 @@ div.svg-tooltip {
 	border-radius: 8px;
 	pointer-events: none;
 }
+div#svg-container .chicp_msg {
+	width: 100%;
+	text-align: center;
+	padding-top: 100px;
+}
 @media print{    
     .no-print, .no-print * {
         display: none !important;
