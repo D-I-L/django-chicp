@@ -46,6 +46,7 @@ def chicpea(request):
     user = request.user
     context = dict()
     context['title'] = 'Capture HiC Plotter'
+    context['admin_url_path'] = settings.ADMIN_URL_PATH
     # context['tissue'] = 'Total_CD4_Activated'
     context['searchTerm'] = random.choice(getattr(chicp_settings, 'DEFAULT_GENES'))
     if queryDict.get("term"):

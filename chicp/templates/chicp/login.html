@@ -4,7 +4,7 @@
 				<li id="user" class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Hello&nbsp;{% if user.get_short_name %}{{ user.get_short_name }}{% else %}{{ user.username }}{% endif %}&nbsp;<b class="caret"></b></a>
 					<ul class="dropdown-menu">
 					{% if user.username == 'admin' %}
-						<li><a href="/admin/"><span class="fa-stack"><i class="fa fa-user"></i><i class="fa fa-cog"></i></span>&nbsp;Adminstration</a></li>
+						<li><a href="{{ admin_url_path }}/admin/"><span class="fa-stack"><i class="fa fa-user"></i><i class="fa fa-cog"></i></span>&nbsp;Adminstration</a></li>
 						<li class="divider"></li>
 					{% endif %}
 						<!-- <li><a href="/accounts/profile"><i class="fa fa-user"></i> Your Account</a></li>
