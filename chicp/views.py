@@ -350,7 +350,7 @@ def chicpeaDownload(request, url):
     output_format = queryDict.get("output_format")
     CSS = queryDict.get("css-styles")
     WIDTH = int(queryDict.get("svg-width")) + 40 + 50
-    HEIGHT = int(queryDict.get("svg-height")) + 60
+    HEIGHT = int(queryDict.get("svg-height")) + 80
     tissue = queryDict.get("tissue").replace(' ', '_')
     returnFileName = 'CHiCP-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
 
@@ -378,7 +378,7 @@ def chicpeaDownload(request, url):
     SVG = re.sub(r'translate\(\d+, 0\)', r'translate('+str(int(m.group(1)) + 60)+', 50)', SVG)
     SVG = SVG.replace('translate(0, 270)', 'translate(0, 390)')
 
-    SVG = SVG.replace('<g>', '<g transform="translate(20,30) scale(1)">', 1)
+    SVG = SVG.replace('<g>', '<g transform="translate(20,50) scale(1)">', 1)
     SVG = SVG.replace('<svg ', '<svg style="width:'+str(WIDTH)+'px;height:'+str(HEIGHT)+'px;" ')
     SVG = SVG.replace("</svg>", '<defs><style type="text/css">'+CSS+'</style></defs></svg>')
 
