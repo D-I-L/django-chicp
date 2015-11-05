@@ -13,6 +13,19 @@
 <style>
 <!--
 .cookie_hide { display:none; }
+.examples > a:before {
+    font-family: FontAwesome;
+    content:"\f147";
+    padding: 0px 5px;
+}
+.examples > a.collapsed:before {
+    content:"\f196";
+}
+.examples > a:hover, 
+.examples > a:active, 
+.examples > a:focus  {
+    text-decoration:none;
+}
 -->
 </style>
 {% endblock %}
@@ -31,13 +44,34 @@
 							id="search_term" value="{{ searchTerm }}">
 						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
 					</div>
+					<div class="panel-group" id="example_searches" aria-multiselectable="true">
+						<div>
+							<div id="headingOne" class="examples">
+								<a class="collapsed" role="button" data-toggle="collapse" data-parent="#example_searches" href="#collapseOne" 
+								aria-expanded="false" aria-controls="collapseOne">Example Searches</a>
+							</div>
+							<div id="collapseOne" aria-labelledby="headingOne" class="collapse" >
+								<div style="font-style:italic;padding:0px 5px;">
+								<a href="?term=NRIP1">NRIP1</a>, 
+								<a href="?term=ENSG00000134460">ENSG00000134460</a>, 
+								<a href="?term=rs2476601">rs2476601</a>,
+								<a href="?term=chr16:10,000,000-11,500,000">chr16:10,000,000-11,500,000</a>
+								</div>
+							</div>
+						</div>
+					</div>
 					<div class="panel panel-default" style="margin-top: 20px">
-						<div class="panel-heading">Promoter Capture Datasets</div>
+						<div class="panel-heading">Capture HiC Datasets
+						<span class="fa-stack fa-lg" style="float:right;font-size:0.8em">
+							<i class="fa fa-circle-thin fa-stack-2x"></i>
+							<i class="fa fa-stack-1x">{{ allIndexes|length }}</i>
+						</span>
+						</div>
 						<div class="panel-body">
 							<div class="form-group" style="width:100%">
 								<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
 						{% for idx in allIndexes %}
-									<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
+									<option id="target-{{ idx.value }}" value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
 						{% endfor %}
 								</select>
 							</div>
@@ -65,7 +99,7 @@
 									<optgroup label="{{ group }}">
 								{% endif %}
 									{% for t in tracks %}
-										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+										<option id="snp_track-{{ t.value }}" value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
 									{% endfor %}
 									</optgroup>
 								{% endfor %}
@@ -260,6 +294,8 @@
 			var tissue = $("input:radio[name=tissue]:checked").val();
 			var gwas = selectObj.options[selectObj.selectedIndex].value;
 			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
+			localStorage["snp_track"] = gwas;
+			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				d3.select("#message").remove();
@@ -300,6 +336,9 @@
 			var term = $("#search_term").val();
 			var tissue = $("input:radio[name=tissue]:checked").val();
 			var gwas = $("#gwas").val();
+			
+			localStorage["tissue"] = tissue
+			localStorage["target"] = target
 			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
@@ -436,13 +475,21 @@
 	            });
 			});
 			
+			if (localStorage["target"] != undefined && $("#target-"+localStorage["target"]) != undefined){
+				$("#target > option").each(function() {
+					$(this).prop("selected", false)
+				});
+				$("#target-"+localStorage["target"]).prop("selected", "selected")
+			}
+			
 			selectObj = $("#target")[0]
 			var target = selectObj.options[selectObj.selectedIndex].value;
 			$(".tissue").hide();
 			$(document.getElementsByClassName(target)).css('display', 'block');
 			$(".tissue").find("input:radio").each( function () {
-				console.log()
-				if ($(this).val() == "{{ default_tissue }}")
+				if (localStorage["tissue"] !== "undefined" && $(this).val() == localStorage["tissue"])
+					$(this).prop('checked', true);
+				else if ($(this).val() == "{{ default_tissue }}" && localStorage["tissue"] == "undefined")
 					$(this).prop('checked', true);
 				else
 					$(this).prop('checked', false);
@@ -491,11 +538,9 @@
 				theRules[0].style.display = '';
 			}
 			
-
-			var termParam = getQueryVariable("term");
-			if (termParam == undefined){ termParam = 'IL2RA'; }
-			var tissueParam = $("input:radio[name=tissue]:checked").val();
-			renderHic(termParam, tissueParam, 1)
+			if (getQueryVariable("term") != undefined){ $("#search_term").val(getQueryVariable("term")); }
+			else if (localStorage.getItem("searchTerm")) { $("#search_term").val(localStorage.getItem("searchTerm")) }
+			doSearch();
 			
 		});
 	</script>

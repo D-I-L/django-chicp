@@ -658,8 +658,9 @@ function addGeneTrack(genes, totalBP){
 				$("#search_term").val(d.gene_name);
 				var term = $("#search_term").val().toUpperCase();
 				d3.selectAll("svg").remove();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+				doSearch()
+				//renderHic(term, tissue, 1);
+				//renderHic(term, tissue, diameter, 1);
 				return false;
 		})
 		
@@ -740,8 +741,9 @@ function addSNPTrackPoints(snps, snpMeta, totalBP){
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
             	d3.selectAll("svg").remove();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+				doSearch()
+				//renderHic(term, tissue, 1);
+				//renderHic(term, tissue, diameter, 1);
             	return false;
 		})
 		
@@ -1288,7 +1290,7 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 $(document).ready(function () {
 		
 	$("#search_term").keyup(function(event){
-			if(event.which == 13){ doSearch(); }
+		if(event.which == 13){ doSearch(); }
 	});
 	
 	$("#pushme").bind("click", function () { doSearch(); });
@@ -1297,6 +1299,8 @@ $(document).ready(function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
     		var gene = $("#search_term").val();
     		$(".page-header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    		
+			localStorage["tissue"] = tissue;
     		
     		resetVis();
     		pathDetails(d3.select("#svg-container").selectAll("path.interaction"));
@@ -1312,8 +1316,21 @@ $(document).ready(function () {
 
 
 function doSearch(){
-	var tissue = $("input:radio[name=tissue]:checked").val();
 	var term = $("#search_term").val();
+	localStorage["searchTerm"] = term;
+	
+	localStorage["target"] = $("#target")[0].options[$("#target")[0].selectedIndex].value;
+	
+	if ($("input:radio[name=tissue]:checked").val() == undefined){
+		$(".tissue").find("input:radio").each(function () { $(this).prop('checked', false); });
+		$(document.getElementsByClassName(localStorage["target"])).first().find("input:radio").prop('checked',true);
+	}
+	var tissue = $("input:radio[name=tissue]:checked").val();
+	localStorage["tissue"] = tissue;
+	if ($("#gwas")[0] == undefined)
+		localStorage["snp_track"] = "None";
+	else
+		localStorage["snp_track"] = $("#gwas")[0].options[$("#gwas")[0].selectedIndex].value;
 	renderHic(term, tissue, 1);
 	return (false);	
 }
