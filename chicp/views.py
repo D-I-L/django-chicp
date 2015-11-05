@@ -5,6 +5,7 @@ import operator
 import os
 import re
 import subprocess
+import random
 from operator import itemgetter
 
 from cairosvg import svg2pdf, svg2png
@@ -45,8 +46,8 @@ def chicpea(request):
     user = request.user
     context = dict()
     context['title'] = 'Capture HiC Plotter'
-    context['searchTerm'] = 'IL2RA'
-    context['tissue'] = 'Total_CD4_Activated'
+    # context['tissue'] = 'Total_CD4_Activated'
+    context['searchTerm'] = random.choice(getattr(chicp_settings, 'DEFAULT_GENES'))
     if queryDict.get("term"):
         context['searchTerm'] = queryDict.get("term")
     if queryDict.get("tissue"):
@@ -155,6 +156,8 @@ def chicpeaSearch(request, url):
     addList = []
     searchType = 'gene'
     searchTerm = queryDict.get("searchTerm").upper()
+    searchTerm = searchTerm.replace(",", "")
+    searchTerm = searchTerm.replace("..", "-")
     snpTrack = queryDict.get("snp_track")
 
     (idx_keys_auth, idx_type_keys_auth) = get_authenticated_idx_and_idx_types(
@@ -178,9 +181,9 @@ def chicpeaSearch(request, url):
                               ['mappings']['gene_target']['_meta']['tissue_type'].keys())
             utils.tissues['CP_TARGET_'+target] = tissueList
 
-    if queryDict.get("region") or re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")):
+    if queryDict.get("region") or re.match(r"(.*):(\d+)-(\d+)", searchTerm):
         searchType = 'region'
-        region = queryDict.get("searchTerm")
+        region = searchTerm
         if queryDict.get("region"):
             region = queryDict.get("region")
         else:
@@ -188,8 +191,9 @@ def chicpeaSearch(request, url):
         mo = re.match(r"(.*):(\d+)-(\d+)", region)
         (chrom, segmin, segmax) = mo.group(1, 2, 3)
         chrom = chrom.replace('chr', "")
-    if re.search("^rs[0-9]+", queryDict.get("searchTerm").lower()):
-        searchTerm = queryDict.get("searchTerm").lower()
+        chrom = chrom.replace('CHR', "")
+    if re.search("^rs[0-9]+", searchTerm.lower()):
+        searchTerm = searchTerm.lower()
         addList.append(_find_snp_position(snpTrack, searchTerm))
         if addList[0].get("error"):
             return JsonResponse({'error': addList[0]['error']})
@@ -202,7 +206,8 @@ def chicpeaSearch(request, url):
     if searchType == 'region':
         query_bool = BoolQuery()
         filter_bool = BoolQuery()
-        if searchTerm and len(addList) == 0 and re.match(r"(.*):(\d+)-(\d+)", queryDict.get("searchTerm")) == None:
+        if searchTerm and len(addList) == 0 and re.match(r"(.*):(\d+)-(\d+)",
+                                                         queryDict.get("searchTerm").replace(",", "")) == None:
             query_bool.must([Query.query_string(searchTerm, fields=["name", "ensg"]),
                              Query.term("baitChr", chrom),
                              Query.term("oeChr", chrom),
