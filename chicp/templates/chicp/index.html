@@ -34,6 +34,10 @@
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
 {% endblock %}
 
+{% block menu_items %}
+					<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
+{% endblock %}
+
 
 {% block sidebar_content %}
 				<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
@@ -348,13 +352,13 @@
 	    		resetVis();
 	    		
 				if (data.error) {
-					$.isLoading( "hide" ); 
+					$.isLoading( "hide" );
+					d3.select("#svg-container").selectAll("*").remove();
 					div = d3.select("#svg-container")
-						.insert("div",":first-child")
+						.append("div")
 						.html("<h1>"+data.error+"</h1>")
 						.attr("id", "message")
-						.style("width", "100%")
-						.style("text-align", "center");
+						.attr("class", "chicp_msg");
 					return;
 				}
 				
@@ -362,13 +366,12 @@
 		        META = data.meta;
 		        var hics = data.hic;
 				if (hics.length == 0) {
+					d3.select("#svg-container").selectAll("*").remove();
 					div = d3.select("#svg-container")
 						.append("div")
 						.html("<h1>No interactions found</h1>")
 						.attr("id", "message")
-						.style("width", "100%")
-						.style("text-align", "center")
-						.style("padding-top", "200px");
+						.attr("class", "chicp_msg");
 			        $.isLoading( "hide" );
 					return;
 				}
@@ -379,7 +382,10 @@
 				for (var i=0;i<META.tissues.length;i++) {
 					tissues[META.tissues[i]] = 0;
 				}
-		        addInteractions(hics, totalBP, tissues);
+				if (d3.select("#main-svg").empty())
+					doSearch();
+				else
+		        	addInteractions(hics, totalBP, tissues);
 				for(var t in tissues) {
 					$("#"+t+"_count").text("("+tissues[t]+")");
 				}
