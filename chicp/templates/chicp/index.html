@@ -109,7 +109,7 @@
 								{% endfor %}
 								</select>
 							</div>
-							{% if user.is_authenticated and user.username != 'AnonymousUser' %}
+							{% if user.is_authenticated and allow_user_uploads %}
 							<div class="strike"><span>OR</span></div>
 							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicp/fileUpload">
 								{% csrf_token %}

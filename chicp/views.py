@@ -81,6 +81,11 @@ def chicpea(request):
     for group in getattr(chicp_settings, 'CP_STATS'):
         if 'CP_STATS_'+group not in idx_keys_auth:
             continue
+        if group == 'UD':
+            if settings.INCLUDE_USER_UPLOADS:
+                context['allow_user_uploads'] = True
+            else:
+                continue
         snp_tracks = list()
         for track, details in (ElasticSettings.get_idx_types(idx_name='CP_STATS_'+group, user='None')).items():
             if 'CP_STATS_'+group+'.'+track not in idx_type_keys_auth:
