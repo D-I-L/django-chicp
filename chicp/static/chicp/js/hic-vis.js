@@ -286,7 +286,7 @@ function renderHic(term, tissue, breadcrumb) {
 		bt['hilight'] = 1;
 		
 		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg")
-		.style("padding-top", "10px").attr("width", diameter).attr("height", diameter+50)
+		.style("padding-top", "10px").attr("width", diameter).attr("height", diameter+100)
 		.on("mouseup", function(d) {
 				if (selecting){
 					selecting = 0;
@@ -313,9 +313,6 @@ function renderHic(term, tissue, breadcrumb) {
 			.attr("class", "svg_only")
 			.attr("id", "snp_track_header")
 			.text("SNP Data: "+$('#gwas option:selected').text());
-		
-		
-//		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
 		
 		vis.append("g").attr("class", "left arrow_heads").selectAll("defs")
 			.data(Object.keys(bt))
@@ -370,7 +367,7 @@ function renderHic(term, tissue, breadcrumb) {
 		
 		//add SNP track
 		addSNPTrackPoints(data.snps, data.snp_meta, totalBP);
-		
+
 		addInteractions(hics, totalBP, tissues);
 
 		var endAngle = (angleOffset * pi)/180,
@@ -909,35 +906,30 @@ function pathDetails(interactions){
 function addGeneKey(){
 	var vis = d3.select("#main-svg");
 	
+	var biotypes = ["protein_coding","lincRNA","snoRNA","antisense","miRNA","snRNA","pseudogene","misc_RNA","processed_transcript"]
+	
+	var rect_width = 20;
+	var text_width = 100;
+	var spacer_width = 5
+	var cols = Math.ceil($("#main-svg").width() / (rect_width + text_width)) - 1;
+	var rows = Math.ceil(biotypes.length / cols);
+	console.log("COLS = "+cols);
+	console.log("ROWS = "+rows);
+	
 	var scale_group = vis.append("g").attr("class", "genes key")
 		.attr("id", "geneKey").selectAll("svg")
-		.data(["protein_coding","lincRNA","snoRNA","antisense","miRNA","snRNA","pseudogene","misc_RNA","processed_transcript"]).enter();
+		.data(biotypes).enter();
 		
 	scale_group.append("rect")
-			.attr("x", function(d, i) { 
-				if (i%2)
-					return (60*i)-60
-				else
-					return 60*i
-			})
-			.attr("y", function(d, i) { return (i%2) * 30 })
-			.attr("width", 20).attr("height", 20)
-		.attr("class", function(d){
-				return d;
-		})
+			.attr("x", function(d, i) { return ((i % cols) * (rect_width+text_width)) })
+			.attr("y", function(d, i) { return Math.floor(i / cols) * 30 })
+			.attr("width", rect_width).attr("height", rect_width)
+			.attr("class", function(d){ return d; })
 		
 	scale_group.append("text")
-		.attr("x", 25)
-		.attr("x", function(d,i) { 
-				if (i%2)
-					return 25+(60*i)-60
-				else
-					return 25+60*i				
-		})
-		.attr("y", function(d, i) { return 15 + (i%2) * 30 })
-		.text(function (d) {
-				return d.replace("_", " ");
-		});	
+		.attr("x", function(d,i) { return (spacer_width+rect_width+ (i % cols) * (rect_width+text_width)) })
+		.attr("y", function(d, i) { return 15 + Math.floor(i / cols) * 30 })
+		.text(function (d) { return d.replace("_", " "); });	
 		
 	vis.selectAll("g.key")
 		.attr("transform", function(){ width = $(this)[0].getBBox().width; return "translate("+((diameter*0.5) - (width*0.5))+","+(diameter - (diameter*0.05))+")"} );
