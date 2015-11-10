@@ -8,6 +8,7 @@ import subprocess
 import random
 import locale
 from operator import itemgetter
+import urllib.request
 
 from cairosvg import svg2pdf, svg2png
 from svgutils.templates import VerticalLayout, ColumnLayout
@@ -16,9 +17,10 @@ from tempfile import NamedTemporaryFile
 
 from django.conf import settings
 from django.core.management import call_command
-from django.http.response import JsonResponse, HttpResponse
+from django.http.response import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
+from django.core.mail import send_mail
 
 from chicp import chicp_settings
 from chicp import utils
@@ -35,10 +37,40 @@ logger = logging.getLogger(__name__)
 
 
 # Create your views here.
+def contactUs(request):
+    formData = request.POST
+    print(formData)
+    CAPTCHA = formData.get("g-recaptcha-response")
+    NAME = formData.get("contact-name")
+    EMAIL = formData.get("contact-email")
+    MSG = formData.get("contact-msg")
+
+    url = "https://www.google.com/recaptcha/api/siteverify?secret="+settings.RECAPTCHA_SECRET+"&response="+CAPTCHA
+    response = urllib.request.urlopen(url)
+    data = json.loads(response.read().decode(response.info().get_param('charset') or 'utf-8'))
+
+    if data.get('sucess') == False:
+        retJSON = {'error': 'Failed to confirm human-status. Please try again'}
+        return HttpResponseForbidden(json.dumps(retJSON))
+
+    message = "Name : "+NAME+"\nE-mail : "+EMAIL+"\n\n"+MSG
+    has_send = send_mail(subject="CHiCP Contact Us", message=message, from_email=EMAIL,
+                         recipient_list=[EMAIL, settings.DEFAULT_FROM_EMAIL])
+
+    if has_send > 0:
+        retJSON = {'sucess': str(has_send) + ' Email(s) sent'}
+        return JsonResponse(retJSON)
+
+    retJSON = {'error': 'Email(s) failed to send.'}
+    return HttpResponseForbidden(json.dumps(retJSON))
+
+
 def chicpeaDocs(request):
     context = dict()
     context['title'] = 'CHiCP Documentation'
     context['page_header'] = 'Documentation'
+    context['admin_url_path'] = settings.ADMIN_URL_PATH
+    context['RECAPTCHA_KEY'] = settings.RECAPTCHA_KEY
     return render(request, 'chicp/docs.html', context, content_type='text/html')
 
 
@@ -48,6 +80,7 @@ def chicpea(request):
     context = dict()
     context['title'] = 'Capture HiC Plotter'
     context['admin_url_path'] = settings.ADMIN_URL_PATH
+    context['RECAPTCHA_KEY'] = settings.RECAPTCHA_KEY
     # context['tissue'] = 'Total_CD4_Activated'
     context['searchTerm'] = random.choice(getattr(chicp_settings, 'DEFAULT_GENES'))
     if queryDict.get("term"):
