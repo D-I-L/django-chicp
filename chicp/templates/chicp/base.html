@@ -86,11 +86,11 @@
 						</div>
 						<div class="form-group">
 							<label>Message</label>
-							<textarea name="contact-msg" rows="6" class="form-control" placeholder="Your Message" data-validation="required">testing..</textarea>
+							<textarea name="contact-msg" rows="6" class="form-control" placeholder="Your Message" data-validation="required"></textarea>
 						</div>
 						<div class="form-group">
 							<label>E-Mail</label>
-							<input name="contact-email" value="ellen.schofield@cimr.cam.ac.uk" class="form-control email" placeholder="Your E-mail" type="text" data-validation="email">
+							<input name="contact-email" class="form-control email" placeholder="Your E-mail" type="text" data-validation="email">
 						</div>
 						<div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_KEY }}"></div>
 						{% csrf_token %}
