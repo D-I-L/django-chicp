@@ -232,11 +232,45 @@ function renderHic(term, tissue, breadcrumb) {
 						$("#"+t+"_count").text("(0)")
 				});
 				d3.select("#svg-container").selectAll("*").remove();
+				if (json.results){
+					console.log(json.results);
+					div = d3.select("#svg-container")
+					.append("div")
+					.html("<p>"+json.error+"</p>")
+					.attr("id", "message")
+					.style("text-align", "left");
+					
+					var table = div.append('table').style("width", "100%").attr("id", "chicp-table-results")
+						.attr("class", "display responsive table table-striped table-condensed dataTable no-footer");
+					table.append('thead').append('tr')
+						.selectAll('th')
+						.data(json.cols).enter()
+						.append('th')
+						.text(function(c){ return c;} );
+						
+					var tr = table.append('tbody')
+						.selectAll('tr')
+						.data(json.results).enter()
+						.append('tr');
+						
+					tr.append('td').html(function(g) { return g.gene_name; });
+					tr.append('td').html(function(g) {
+							return '<a href="#" onclick="$(\'#search_term\').val(\''+g.gene_id+'\');d3.select(\'#svg-container\').selectAll(\'*\').remove();doSearch();return false;">'+g.gene_id+'</a>';
+					});
+					tr.append('td').html(function(g) { return g.location });
+					
+					$('#chicp-table-results').dataTable({
+						"bPaginate": true,
+						"pagingType": "simple"
+					});
+				}
+				else{
 				div = d3.select("#svg-container")
 				.append("div")
 				.html("<h1>"+json.error+"</h1>")
 				.attr("id", "message")
 				.attr("class", "chicp_msg");
+				}
 			
 			$.isLoading( "hide" );
 			return;
@@ -302,7 +336,7 @@ function renderHic(term, tissue, breadcrumb) {
 			.attr("x", 0).attr("y", -20)
 			.attr("text-anchor", "left")  
 			.style("font-size", "20px")
-			.attr("class", "page-header svg_only")
+			.attr("class", "page_header svg_only")
 			.text($("#page_header").html());
 		
 		vis.append("text")
@@ -913,8 +947,6 @@ function addGeneKey(){
 	var spacer_width = 5
 	var cols = Math.ceil($("#main-svg").width() / (rect_width + text_width)) - 1;
 	var rows = Math.ceil(biotypes.length / cols);
-	console.log("COLS = "+cols);
-	console.log("ROWS = "+rows);
 	
 	var scale_group = vis.append("g").attr("class", "genes key")
 		.attr("id", "geneKey").selectAll("svg")
@@ -1226,7 +1258,7 @@ function resetPage(term, tissue, breadcrumb) {
     $(".tipsy").remove();
     resetVis();
     $("#search_term").val(term);
-    $(".page-header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    $(".page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
     termText = term
     termId = term
     if ($("#regionSearch").val() != '' && $("#regionSearch").val() != term){
@@ -1264,6 +1296,7 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 		var l2 = s2 * (pi/180) * innerRadius
 		var p1 = Math.ceil(META.ostart+(l1*(totalBP/circAvail)))
 		var p2 = Math.ceil(META.ostart+(l2*(totalBP/circAvail)))
+		if(p1 < 0) p1=0;
 		var region = CHR+":"+p1+"-"+p2;
 		console.log(region)
 		var gwas = $("#gwas").val();
@@ -1287,7 +1320,7 @@ $(document).ready(function () {
     $("input:radio[name=tissue]").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
     		var gene = $("#search_term").val();
-    		$(".page-header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    		$(".page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
     		
 			localStorage["tissue"] = tissue;
     		

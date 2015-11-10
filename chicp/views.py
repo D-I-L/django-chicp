@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import random
+import locale
 from operator import itemgetter
 
 from cairosvg import svg2pdf, svg2png
@@ -23,7 +24,7 @@ from chicp import chicp_settings
 from chicp import utils
 from elastic.elastic_settings import ElasticSettings
 from elastic.query import BoolQuery, Query, RangeQuery, Filter
-from elastic.search import Search, ElasticQuery
+from elastic.search import Search, ElasticQuery, Sort
 from elastic.exceptions import SettingsError
 from pydgin_auth.permissions import get_authenticated_idx_and_idx_types
 from pydgin_auth.elastic_model_factory import ElasticPermissionModelFactory as elastic_factory
@@ -268,6 +269,28 @@ def chicpeaSearch(request, url):
                 retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
                 return JsonResponse(retJSON)
     else:
+        geneQuery = ElasticQuery.query_string(searchTerm, fields=["gene_name"])
+        resultObj = Search(idx=getattr(chicp_settings, 'CP_GENE_IDX') + '/genes/',
+                           search_query=geneQuery, size=0, qsort=Sort('seqid:asc,start')).search()
+        if resultObj.hits_total > 1:
+            geneResults = []
+            resultObj2 = Search(idx=getattr(chicp_settings, 'CP_GENE_IDX') + '/genes/', search_query=geneQuery,
+                                size=(resultObj.hits_total+1), qsort=Sort('seqid:asc,start')).search()
+            for d in resultObj2.docs:
+                geneResults.append({
+                    'gene_name': getattr(d, "attr")["gene_name"].replace('\"', ''),
+                    'gene_id': getattr(d, "attr")["gene_id"].replace('\"', ''),
+                    'location': "chr" + getattr(d, "seqid") + ":" +
+                    locale.format_string("%d", getattr(d, "start"), grouping=True) + ".." +
+                    locale.format_string("%d", getattr(d, "end"), grouping=True),
+                })
+            retJSON = {
+                'error': 'Gene name <strong>'+searchTerm+'</strong> returns too many hits, please select your prefered result from the list below.',
+                'results': geneResults,
+                'cols': ['HGNC Symbol', 'Ensembl Gene ID', 'Location']
+            }
+            return JsonResponse(retJSON)
+
         query_bool = BoolQuery()
         query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
         query_bool = _add_tissue_filter(query_bool, targetIdx)
@@ -356,7 +379,7 @@ def chicpeaDownload(request, url):
     output_format = queryDict.get("output_format")
     CSS = queryDict.get("css-styles")
     WIDTH = int(queryDict.get("svg-width")) + 40 + 50
-    HEIGHT = int(queryDict.get("svg-height")) + 80
+    HEIGHT = int(queryDict.get("svg-height")) + 100
     tissue = queryDict.get("tissue").replace(' ', '_')
     returnFileName = 'CHiCP-' + queryDict.get("searchTerm") + '-' + tissue + '.' + output_format
 
