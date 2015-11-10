@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 # Create your views here.
 def contactUs(request):
     formData = request.POST
-    print(formData)
     CAPTCHA = formData.get("g-recaptcha-response")
     NAME = formData.get("contact-name")
     EMAIL = formData.get("contact-email")
