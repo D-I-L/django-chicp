@@ -85,12 +85,12 @@
 							<input name="contact-name" value="{% if user.is_authenticated and user.username != 'AnonymousUser' %}{{ user.get_full_name }}{% endif %}" class="form-control required" placeholder="Your Name" data-validation="length" data-validation-length="min3" type="text">
 						</div>
 						<div class="form-group">
-							<label>Message</label>
-							<textarea name="contact-msg" rows="6" class="form-control" placeholder="Your Message" data-validation="required"></textarea>
-						</div>
-						<div class="form-group">
 							<label>E-Mail</label>
 							<input name="contact-email" class="form-control email" placeholder="Your E-mail" type="text" data-validation="email">
+						</div>
+						<div class="form-group">
+							<label>Message</label>
+							<textarea name="contact-msg" rows="6" class="form-control" placeholder="Your Message" data-validation="required"></textarea>
 						</div>
 						<div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_KEY }}"></div>
 						{% csrf_token %}
