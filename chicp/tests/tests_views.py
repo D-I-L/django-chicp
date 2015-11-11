@@ -37,7 +37,7 @@ class ChicpeaTestCase(TestCase):
         ''' Test the content returned for the main CHiCP page. '''
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'IL2RA', response.content)
+        self.assertIn(b'CHiCP', response.content)
 
     def test_page_with_hgnc(self):
         ''' Test CHiCP page with HGNC Gene name '''
