@@ -134,12 +134,10 @@ function computePath(start, end, r, totalBP, diameter) {
 function computeStrandPath(start, end, r, totalBP, flag) {
     startcoords = computeCartesian(r, start, totalBP);
     endcoords = computeCartesian(r, end, totalBP);
-    //var flag = "0,1";
     if (undefined === flag){
-    	flag = "0,1";    	
-		if ((end - start) /totalBP > 0.5){
+    	flag = "0,1";
+		if ((end - start - ((angleOffset/350)*totalBP)) /totalBP > 0.5){
 			flag = "1,1";
-		// flag = "0,0";
 		}
     }
     return ("M" + startcoords.x + "," + startcoords.y +
@@ -222,7 +220,7 @@ function renderHic(term, tissue, breadcrumb) {
 	resetPage(term, tissue, breadcrumb)
 	
 	url = "/chicp/search?searchTerm=" + term + '&tissue=' + tissue+'&targetIdx='+targetIdx;
-	if (gwas != "" && $.cookie('cb-enabled') == 'accepted') url += '&snp_track=' + gwas;
+	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
 	if (region != "") url += '&region='+region;
 	$("#regionSearch").val("");
 	
@@ -233,13 +231,46 @@ function renderHic(term, tissue, breadcrumb) {
 						var t = $(this).find("input").val();
 						$("#"+t+"_count").text("(0)")
 				});
+				d3.select("#svg-container").selectAll("*").remove();
+				if (json.results){
+					console.log(json.results);
+					div = d3.select("#svg-container")
+					.append("div")
+					.html("<p>"+json.error+"</p>")
+					.attr("id", "message")
+					.style("text-align", "left");
+					
+					var table = div.append('table').style("width", "100%").attr("id", "chicp-table-results")
+						.attr("class", "display responsive table table-striped table-condensed dataTable no-footer");
+					table.append('thead').append('tr')
+						.selectAll('th')
+						.data(json.cols).enter()
+						.append('th')
+						.text(function(c){ return c;} );
+						
+					var tr = table.append('tbody')
+						.selectAll('tr')
+						.data(json.results).enter()
+						.append('tr');
+						
+					tr.append('td').html(function(g) { return g.gene_name; });
+					tr.append('td').html(function(g) {
+							return '<a href="#" onclick="$(\'#search_term\').val(\''+g.gene_id+'\');d3.select(\'#svg-container\').selectAll(\'*\').remove();doSearch();return false;">'+g.gene_id+'</a>';
+					});
+					tr.append('td').html(function(g) { return g.location });
+					
+					$('#chicp-table-results').dataTable({
+						"bPaginate": true,
+						"pagingType": "simple"
+					});
+				}
+				else{
 				div = d3.select("#svg-container")
 				.append("div")
 				.html("<h1>"+json.error+"</h1>")
 				.attr("id", "message")
-				.style("width", "100%")
-				.style("text-align", "center")
-				.style("padding-top", "200px");
+				.attr("class", "chicp_msg");
+				}
 			
 			$.isLoading( "hide" );
 			return;
@@ -266,13 +297,12 @@ function renderHic(term, tissue, breadcrumb) {
 		
 		var hics = data.hic;
 		if (hics.length == 0) {
+			d3.select("#svg-container").selectAll("*").remove();
 			div = d3.select("#svg-container")
 				.append("div")
 				.html("<h1>No interactions found</h1>")
 				.attr("id", "message")
-				.style("width", "100%")
-				.style("text-align", "center")
-				.style("padding-top", "200px");
+				.attr("class", "chicp_msg");
 			$.isLoading( "hide" );
 			return;
 		}
@@ -289,7 +319,8 @@ function renderHic(term, tissue, breadcrumb) {
 		}
 		bt['hilight'] = 1;
 		
-		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg").attr("width", diameter).attr("height", diameter+50)
+		var vis = d3.select("#svg-container").append("svg").attr("id", "main-svg")
+		.style("padding-top", "10px").attr("width", diameter).attr("height", diameter+100)
 		.on("mouseup", function(d) {
 				if (selecting){
 					selecting = 0;
@@ -302,23 +333,20 @@ function renderHic(term, tissue, breadcrumb) {
 		});
 		
 		vis.append("text")
-			.attr("x", 0).attr("y", 0)
+			.attr("x", 0).attr("y", -20)
 			.attr("text-anchor", "left")  
 			.style("font-size", "20px")
-			.attr("class", "page-header svg_only")
+			.attr("class", "page_header svg_only")
 			.text($("#page_header").html());
 		
 		vis.append("text")
-			.attr("x", 0).attr("y", 20)
+			.attr("x", 0).attr("y", 0)
 			.attr("text-anchor", "left")
 			.style("font-size", "14px")
 			.style("font-style", "italic")
 			.attr("class", "svg_only")
 			.attr("id", "snp_track_header")
 			.text("SNP Data: "+$('#gwas option:selected').text());
-		
-		
-//		var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);	
 		
 		vis.append("g").attr("class", "left arrow_heads").selectAll("defs")
 			.data(Object.keys(bt))
@@ -373,7 +401,7 @@ function renderHic(term, tissue, breadcrumb) {
 		
 		//add SNP track
 		addSNPTrackPoints(data.snps, data.snp_meta, totalBP);
-		
+
 		addInteractions(hics, totalBP, tissues);
 
 		var endAngle = (angleOffset * pi)/180,
@@ -658,8 +686,9 @@ function addGeneTrack(genes, totalBP){
 				$("#search_term").val(d.gene_name);
 				var term = $("#search_term").val().toUpperCase();
 				d3.selectAll("svg").remove();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+				doSearch()
+				//renderHic(term, tissue, 1);
+				//renderHic(term, tissue, diameter, 1);
 				return false;
 		})
 		
@@ -740,8 +769,9 @@ function addSNPTrackPoints(snps, snpMeta, totalBP){
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
             	d3.selectAll("svg").remove();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+				doSearch()
+				//renderHic(term, tissue, 1);
+				//renderHic(term, tissue, diameter, 1);
             	return false;
 		})
 		
@@ -910,35 +940,28 @@ function pathDetails(interactions){
 function addGeneKey(){
 	var vis = d3.select("#main-svg");
 	
+	var biotypes = ["protein_coding","lincRNA","snoRNA","antisense","miRNA","snRNA","pseudogene","misc_RNA","processed_transcript"]
+	
+	var rect_width = 20;
+	var text_width = 100;
+	var spacer_width = 5
+	var cols = Math.ceil($("#main-svg").width() / (rect_width + text_width)) - 1;
+	var rows = Math.ceil(biotypes.length / cols);
+	
 	var scale_group = vis.append("g").attr("class", "genes key")
 		.attr("id", "geneKey").selectAll("svg")
-		.data(["protein_coding","lincRNA","snoRNA","antisense","miRNA","snRNA","pseudogene","misc_RNA","processed_transcript"]).enter();
+		.data(biotypes).enter();
 		
 	scale_group.append("rect")
-			.attr("x", function(d, i) { 
-				if (i%2)
-					return (60*i)-60
-				else
-					return 60*i
-			})
-			.attr("y", function(d, i) { return (i%2) * 30 })
-			.attr("width", 20).attr("height", 20)
-		.attr("class", function(d){
-				return d;
-		})
+			.attr("x", function(d, i) { return ((i % cols) * (rect_width+text_width)) })
+			.attr("y", function(d, i) { return Math.floor(i / cols) * 30 })
+			.attr("width", rect_width).attr("height", rect_width)
+			.attr("class", function(d){ return d; })
 		
 	scale_group.append("text")
-		.attr("x", 25)
-		.attr("x", function(d,i) { 
-				if (i%2)
-					return 25+(60*i)-60
-				else
-					return 25+60*i				
-		})
-		.attr("y", function(d, i) { return 15 + (i%2) * 30 })
-		.text(function (d) {
-				return d.replace("_", " ");
-		});	
+		.attr("x", function(d,i) { return (spacer_width+rect_width+ (i % cols) * (rect_width+text_width)) })
+		.attr("y", function(d, i) { return 15 + Math.floor(i / cols) * 30 })
+		.text(function (d) { return d.replace("_", " "); });	
 		
 	vis.selectAll("g.key")
 		.attr("transform", function(){ width = $(this)[0].getBBox().width; return "translate("+((diameter*0.5) - (width*0.5))+","+(diameter - (diameter*0.05))+")"} );
@@ -956,11 +979,13 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 		borderColor = "red";
 		
 //	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
-    var gwas = $("#gwas").val();
+	var url = "/chicp/subSearch?region=" + region + '&tissue=' + tissue;
+    var gwas = $("#gwas").val();    
+	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
 		
-	d3.json("/chicp/subSearch?region=" + region + '&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
+	d3.json(url, function (error, data) {
 			if (error) { $("#panel-" + type).isLoading( "hide" ); return console.warn(error);}
 			
 			if (type === 'bait') borderColor = 'blue';
@@ -1233,7 +1258,7 @@ function resetPage(term, tissue, breadcrumb) {
     $(".tipsy").remove();
     resetVis();
     $("#search_term").val(term);
-    $(".page-header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    $(".page_header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
     termText = term
     termId = term
     if ($("#regionSearch").val() != '' && $("#regionSearch").val() != term){
@@ -1269,15 +1294,16 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 		s2 = parseInt(selectedArray[selectedArray.length-1].id.replace("seg", ""))
 		var l1 = (s1-angleOffset) * (pi/180) * innerRadius
 		var l2 = s2 * (pi/180) * innerRadius
-		var p1 = Math.ceil(start+(l1*(totalBP/circAvail)))
-		var p2 = Math.ceil(start+(l2*(totalBP/circAvail)))
+		var p1 = Math.ceil(META.ostart+(l1*(totalBP/circAvail)))
+		var p2 = Math.ceil(META.ostart+(l2*(totalBP/circAvail)))
+		if(p1 < 0) p1=0;
 		var region = CHR+":"+p1+"-"+p2;
+		console.log(region)
 		var gwas = $("#gwas").val();
 		var tissue = $("input:radio[name=tissue]:checked").val();
 		$("#regionSearch").val(region);
 		var term = $("#search_term").val();
-						renderHic(term, tissue, 1);
-						//renderHic(term, tissue, diameter, 1);
+		renderHic(term, tissue, 1);
 		$("#regionSearch").val("");
 	}
 }
@@ -1286,7 +1312,7 @@ function zoomIn(innerRadius, circAvail, angleOffset){
 $(document).ready(function () {
 		
 	$("#search_term").keyup(function(event){
-			if(event.which == 13){ doSearch(); }
+		if(event.which == 13){ doSearch(); }
 	});
 	
 	$("#pushme").bind("click", function () { doSearch(); });
@@ -1294,7 +1320,9 @@ $(document).ready(function () {
     $("input:radio[name=tissue]").bind("click", function () {
     		var tissue = $("input:radio[name=tissue]:checked").val();
     		var gene = $("#search_term").val();
-    		$(".page-header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    		$(".page_header").html(gene + " in " + tissue.replace(/_/g, " ") + " Tissues");
+    		
+			localStorage["tissue"] = tissue;
     		
     		resetVis();
     		pathDetails(d3.select("#svg-container").selectAll("path.interaction"));
@@ -1310,8 +1338,21 @@ $(document).ready(function () {
 
 
 function doSearch(){
-	var tissue = $("input:radio[name=tissue]:checked").val();
 	var term = $("#search_term").val();
+	localStorage["searchTerm"] = term;
+	
+	localStorage["target"] = $("#target")[0].options[$("#target")[0].selectedIndex].value;
+	
+	if ($("input:radio[name=tissue]:checked").val() == undefined){
+		$(".tissue").find("input:radio").each(function () { $(this).prop('checked', false); });
+		$(document.getElementsByClassName(localStorage["target"])).first().find("input:radio").prop('checked',true);
+	}
+	var tissue = $("input:radio[name=tissue]:checked").val();
+	localStorage["tissue"] = tissue;
+	if ($("#gwas")[0] == undefined)
+		localStorage["snp_track"] = "None";
+	else
+		localStorage["snp_track"] = $("#gwas")[0].options[$("#gwas")[0].selectedIndex].value;
 	renderHic(term, tissue, 1);
 	return (false);	
 }

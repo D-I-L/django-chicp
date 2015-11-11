@@ -1,8 +1,8 @@
 =======
-Chicpea
+ CHiCP
 =======
 
-Chicpea is a Django app to visualise HiC interactions.
+CHiCP is a Django app to visualise HiC interactions (www.chicp.org).
 
 Quick start
 -----------
@@ -12,8 +12,8 @@ Quick start
 
 2. Installation
 ```bash
-	pip install -e git://github.com/D-I-L/django-chicpea.git#egg=chicpea
-	pip install --exists-action w -r $PYENV_HOME/src/chicpea/chicpea/requirements.txt 
+	pip install -e git://github.com/D-I-L/django-chicp.git#egg=chicp
+	pip install --exists-action w -r $PYENV_HOME/src/chicp/chicp/requirements.txt 
 	sed -i 's|from transform import|from svgutils.transform import|' $PYENV_HOME/src/svgutils/src/svgutils/templates.py
 ```
 
@@ -21,13 +21,13 @@ Quick start
 ```python
     INSTALLED_APPS = (
         ...
-        'chicpea',
+        'chicp',
     )
 ```
 
-3. Include the chicpea URLconf in your project urls.py like this::
+3. Include the chicp URLconf in your project urls.py like this::
 ```python
-	url(r'^chicpea/', include('chicpea.urls', namespace="chicpea")),
+	url(r'^chicp/', include('chicp.urls', namespace="chicp")),
 ```
 
 5. Create a settings_secret.py in your django project and include it from settings.py.  Add details for ELASTIC search functionality like this::
@@ -36,8 +36,6 @@ Quick start
 	ELASTIC = {
 	    'default': {
 	        'ELASTIC_URL': 'http://elastic:9200/',
-	        'TEST': 'auto_tests',
-	        'REPOSITORY': 'my_backup',
 	    }
 	}
 ```
