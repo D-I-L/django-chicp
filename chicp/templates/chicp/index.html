@@ -13,6 +13,19 @@
 <style>
 <!--
 .cookie_hide { display:none; }
+.examples > a:before {
+    font-family: FontAwesome;
+    content:"\f147";
+    padding: 0px 5px;
+}
+.examples > a.collapsed:before {
+    content:"\f196";
+}
+.examples > a:hover, 
+.examples > a:active, 
+.examples > a:focus  {
+    text-decoration:none;
+}
 -->
 </style>
 {% endblock %}
@@ -22,22 +35,53 @@
 {% endblock %}
 
 
+{% block sidebar_button %}
+					<button type="button" class="navbar-toggle btn btn-default" data-toggle="collapse" data-target=".sidebar"><i class="fa fa-search" style="color:white"></i></button>
+{% endblock %}
+
+{% block menu_items %}
+					<li><a href="#" data-toggle="modal" data-target="#settingsModal"><i class="fa fa-cog"></i>&nbsp; Settings</a></li>
+{% endblock %}
+
+
 {% block sidebar_content %}
 				<ul class="nav nav-sidebar navbar-form navbar-left" style="margin-bottom:0px;">
 					<!-- <form class="navbar-form navbar-left" role="search" name="search" style="margin-bottom:0px;">-->
+				    <div class="input-group add-on" style="width:100%">
+				      <input type="text" class="form-control" placeholder="Search" name="search_term" id="search_term" value="{{ searchTerm }}">
+				      <div class="input-group-btn">
+				        <button type="submit" class="btn btn-default" id="pushme"><i class="fa fa-search"></i></button>
+				      </div>
+				    </div>
 					<input type="hidden" id="regionSearch" value="{{ region }}">
-					<div class="form-group">
-						<input type="text" class="form-control" placeholder="Search Term"
-							id="search_term" value="{{ searchTerm }}">
-						<button type="submit" class="btn btn-default" id="pushme">Submit</button>
+					<div class="panel-group" id="example_searches" aria-multiselectable="true">
+						<div>
+							<div id="headingOne" class="examples">
+								<a class="collapsed" role="button" data-toggle="collapse" data-parent="#example_searches" href="#collapseOne" 
+								aria-expanded="false" aria-controls="collapseOne">Example Searches</a>
+							</div>
+							<div id="collapseOne" aria-labelledby="headingOne" class="collapse" >
+								<div style="font-style:italic;padding:0px 5px;">
+								<a href="#" onclick="$('#search_term').val('NRIP1');d3.select('#svg-container').selectAll('*').remove();doSearch();return false;">NRIP1</a>, 
+								<a href="#" onclick="$('#search_term').val('ENSG00000134460');d3.select('#svg-container').selectAll('*').remove();doSearch();return false;">ENSG00000134460</a>,
+								<a href="#" onclick="$('#search_term').val('rs2476601');d3.select('#svg-container').selectAll('*').remove();doSearch();return false;">rs2476601</a>,
+								<a href="#" onclick="$('#search_term').val('chr16:10,000,000-11,500,000');d3.select('#svg-container').selectAll('*').remove();doSearch();return false;">chr16:10,000,000-11,500,000</a>
+								</div>
+							</div>
+						</div>
 					</div>
 					<div class="panel panel-default" style="margin-top: 20px">
-						<div class="panel-heading">Promoter Capture Datasets</div>
+						<div class="panel-heading">Capture HiC Datasets
+						<span class="fa-stack fa-lg" style="float:right;font-size:0.8em">
+							<i class="fa fa-circle-thin fa-stack-2x"></i>
+							<i class="fa fa-stack-1x">{{ allIndexes|length }}</i>
+						</span>
+						</div>
 						<div class="panel-body">
 							<div class="form-group" style="width:100%">
 								<select class="form-control targets" name="target" id="target" onchange="switch_targets(this)" style="width:100%">
 						{% for idx in allIndexes %}
-									<option value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
+									<option id="target-{{ idx.value }}" value="{{ idx.value }}"{% if idx.value ==  default_target %} selected="selected"{% endif %}>{{ idx.text }}</option>
 						{% endfor %}
 								</select>
 							</div>
@@ -52,10 +96,11 @@
 							</div>
 						</div>
 					</div>
+					{% if snpTracks|length > 0 %}
 					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
 						<div class="panel-heading">Association Studies</div>
 						<div class="panel-body">
-							<div class="form-group">
+							<div class="form-group" style="width:100%">
 								<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
 								{% for group, tracks in snpTracks.items %}
 								{% if group == 'User Data' %}
@@ -64,35 +109,46 @@
 									<optgroup label="{{ group }}">
 								{% endif %}
 									{% for t in tracks %}
-										<option value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
+										<option id="snp_track-{{ t.value }}" value="{{ t.value }}"{% if t.value ==  snp_track %} selected="selected"{% endif %}>{{ t.text }}</option>
 									{% endfor %}
 									</optgroup>
 								{% endfor %}
 								</select>
 							</div>
-							<div class="strike"><span>OR</span></div>
+							{% if user.is_authenticated and allow_user_uploads %}
+							<div class="strike hidden-xs hidden-sm"><span>OR</span></div>
 							<form class="hidden-xs hidden-sm" role="upload" name="fileUpload" id="fileUpload" style="margin-top:0px;" method="post" enctype="multipart/form-data" action="/chicp/fileUpload">
 								{% csrf_token %}
 								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
 							</form>
+							{% endif %}
 						</div>
 					</div>
+					{% endif %}
 				</ul>
 {% endblock %}
 
 {% block content %}
-				<span style="float: right" class="no-print">
-					<button class="btn btn-primary" id="save_as_svg" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;SVG
-					</button>
-					<button class="btn btn-primary" id="save_as_pdf" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;PDF
-					</button>
-					<button class="btn btn-primary" id="save_as_png" value="">
-						<i class="fa fa-floppy-o"></i>&nbsp;PNG
-					</button>
-				</span>
-				<h1 class="page-header" id="page_header"></h1>
+				<div class="row">
+					<div class="col-xs-12 col-md-8 col-lg-6">
+						<h1 class="page_header" id="page_header"></h1>
+					</div>
+					
+					<div class="col-xs-12 col-md-4 col-lg-6">
+				
+						<span class="pull-right no-print">
+							<button class="btn btn-primary" id="save_as_svg" value="">
+								<i class="fa fa-floppy-o"></i>&nbsp;SVG
+							</button>
+							<button class="btn btn-primary" id="save_as_pdf" value="">
+								<i class="fa fa-floppy-o"></i>&nbsp;PDF
+							</button>
+							<button class="btn btn-primary" id="save_as_png" value="">
+								<i class="fa fa-floppy-o"></i>&nbsp;PNG
+							</button>
+						</span>
+					</div>
+				</div>
 				<ol class="breadcrumb no-print" id="breadcrumb">
 					<li><a href="/chicp/">Start</a></li>
 				</ol>
@@ -141,8 +197,18 @@
 				<div class="modal-body">
 					<!-- content goes here -->
 					<span id="scoreSliderValLabel">Interaction Score:&nbsp;</span><input id="scoreSliderInput" type="text" />&nbsp;<span id="scoreSliderVal">5</span>
+					{% if user.is_authenticated and user.username != 'AnonymousUser' %}
 					<h4>User Data Tracks</h4>
-					<ul id="userSettings" style="padding:0px; list-style:none;cursor:pointer;"></ul>
+					<ul id="userSettings" style="padding:0px; list-style:none;cursor:pointer;">
+					{% for group, tracks in snpTracks.items %}
+						{% if group == 'User Data' %}
+						{% for t in tracks %}
+						<li class="deleteUD" id="{{ t.value }}"><i class="fa fa-trash-o" id="DEL-{{ t.value }}"></i>&nbsp;{{ t.text }}</li>
+						{% endfor %}
+						{% endif %}					
+					{% endfor %}
+					</ul>
+					{% endif %}
 				</div>
 
 				<div class="modal-footer">
@@ -220,11 +286,15 @@
 			if ($("svg").length == 3) {
 				baitSVG = (new XMLSerializer).serializeToString($("#bait-svg")[0]);
 				targetSVG = (new XMLSerializer).serializeToString($("#target-svg")[0]);
-				svgWidth += $("#bait-svg").width();
-				svgHeight2 = $("#bait-svg").height() + $("#target-svg").height()
+				svgWidth += $("#panel-bait").width();
+				svgHeight2 = $("#panel-bait").height() + $("#panel-target").height()
+				console.log($("#panel-target").height())
 				if (svgHeight2 > svgHeight)
 					svgHeight = svgHeight2
 			}
+			
+			console.log(svgHeight)
+			return;
 
 			// Submit the <FORM> to the server.
 			// The result will be an attachment file to download.
@@ -246,6 +316,8 @@
 			var tissue = $("input:radio[name=tissue]:checked").val();
 			var gwas = selectObj.options[selectObj.selectedIndex].value;
 			var targetIdx = $("#target")[0].options[$("#target")[0].selectedIndex].value;
+			localStorage["snp_track"] = gwas;
+			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+targetIdx+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				d3.select("#message").remove();
@@ -289,23 +361,37 @@
 
 	        $(".page-header").html(term + " in " + tissue.replace(/_/g, " ") + " Tissues");
 			
+			localStorage["tissue"] = tissue
+			localStorage["target"] = target
+			
 			$.isLoading({ text: "Loading" });
 			d3.json("/chicp/search?searchTerm="+term+"&region=" + region + '&targetIdx='+target+'&tissue=' + tissue + '&snp_track=' + gwas, function (error, data) {
 				if (error) {$.isLoading( "hide" ); console.warn(error); return}
 				d3.select("#svg-container").selectAll(".middle.hic").remove();
 				d3.select("#svg-container").selectAll(".deleteSearch").remove();
 	    		resetVis();
+	    		
+				if (data.error) {
+					$.isLoading( "hide" );
+					d3.select("#svg-container").selectAll("*").remove();
+					div = d3.select("#svg-container")
+						.append("div")
+						.html("<h1>"+data.error+"</h1>")
+						.attr("id", "message")
+						.attr("class", "chicp_msg");
+					return;
+				}
+				
 		        var totalBP = data.meta.rend - data.meta.rstart;
 		        META = data.meta;
 		        var hics = data.hic;
 				if (hics.length == 0) {
+					d3.select("#svg-container").selectAll("*").remove();
 					div = d3.select("#svg-container")
 						.append("div")
 						.html("<h1>No interactions found</h1>")
 						.attr("id", "message")
-						.style("width", "100%")
-						.style("text-align", "center")
-						.style("padding-top", "200px");
+						.attr("class", "chicp_msg");
 			        $.isLoading( "hide" );
 					return;
 				}
@@ -316,7 +402,10 @@
 				for (var i=0;i<META.tissues.length;i++) {
 					tissues[META.tissues[i]] = 0;
 				}
-		        addInteractions(hics, totalBP, tissues);
+				if (d3.select("#main-svg").empty())
+					doSearch();
+				else
+		        	addInteractions(hics, totalBP, tissues);
 				for(var t in tissues) {
 					$("#"+t+"_count").text("("+tissues[t]+")");
 				}
@@ -348,7 +437,7 @@
 				if (r == true) {
 					$.isLoading({ text: "Loading" });
 	                var formData = new FormData();
-	                formData.append("userDataIdx", id.replace('userdata-',''));
+	                formData.append("userDataIdx", id.replace('ud-',''));
 	                formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
 					$.ajax({
 	                	url: "deleteUserData",
@@ -358,7 +447,7 @@
 	                	contentType: false,   // tell jQuery not to set contentType
 	                	success: function(data){
 	                		if(data.acknowledged){
-	                			localStorage.removeItem(id);
+	                			// localStorage.removeItem(id);
 	                			optGroup = $("#userData");			
 	                			optGroup.find('option[value="'+id+'"]').remove();
 	                			userSettings = $("#userSettings");
@@ -369,11 +458,7 @@
 	                	error: function(e){
 	        		        $.isLoading( "hide" );
 	                	}
-	                });
-					
-					
-					
-					
+	                });	
 				}
 			});
 			
@@ -412,9 +497,10 @@
 	                		userSettings = $("#userSettings");
 	                		for (i = 0; i < data.userSNPTracks.length; i++) {
 	                			f = data.userSNPTracks[i]
-	                			localStorage["userdata-"+f.value] = f.text
-	                			optGroup.append('<option value="userdata-'+f.value+'">'+f.text+'</option>');
-	                			userSettings.append('<li class="deleteUD" id="userdata-'+f.value+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+f.text+'</li>');
+	                			// localStorage[f.value] = f.text
+	                			optGroup.append('<option value="'+f.value+'">'+f.text+'</option>');
+	                			userSettings.append('<li class="deleteUD" id="'+f.value+'">'+
+	                			'<i class="fa fa-trash-o" id="DEL-'+f.value+'"></i>&nbsp;'+f.text+'</li>');
 	                		}
 	        		        $.isLoading( "hide" );
 	                	},
@@ -427,13 +513,21 @@
 	            });
 			});
 			
+			if (localStorage["target"] != undefined && $("#target-"+localStorage["target"]) != undefined){
+				$("#target > option").each(function() {
+					$(this).prop("selected", false)
+				});
+				$("#target-"+localStorage["target"]).prop("selected", "selected")
+			}
+			
 			selectObj = $("#target")[0]
 			var target = selectObj.options[selectObj.selectedIndex].value;
 			$(".tissue").hide();
 			$(document.getElementsByClassName(target)).css('display', 'block');
 			$(".tissue").find("input:radio").each( function () {
-				console.log()
-				if ($(this).val() == "{{ default_tissue }}")
+				if (localStorage["tissue"] !== "undefined" && $(this).val() == localStorage["tissue"])
+					$(this).prop('checked', true);
+				else if ($(this).val() == "{{ default_tissue }}" && localStorage["tissue"] == "undefined")
 					$(this).prop('checked', true);
 				else
 					$(this).prop('checked', false);
@@ -455,18 +549,19 @@
 			if ($.cookie('cb-enabled') == 'enabled' || $.cookie('cb-enabled') == 'accepted'){
 				showCookieProtected();
 			
-	    		optGroup = $("#userData");
+				/* optGroup = $("#userData");
 	    		userSettings = $("#userSettings");
 	    		optGroup.empty();
 	    		userSettings.empty();
 	    		for (var i = 0; i < localStorage.length; i++){
-	    			if (localStorage.key(i).match(/userdata-/g)){
+	    			if (localStorage.key(i).match(/ud-/g)){
 	    				//console.log(localStorage.key(i))
 	    				optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
 	    				userSettings.append('<li class="deleteUD" id="'+localStorage.key(i)+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+localStorage.getItem(localStorage.key(i))+'</li>');
 	    			}
-	    		}
-			}
+	    		}*/
+			}	
+
 			
 			function showCookieProtected(){
 				var styleSheetList = document.styleSheets;
@@ -481,11 +576,9 @@
 				theRules[0].style.display = '';
 			}
 			
-
-			var termParam = getQueryVariable("term");
-			if (termParam == undefined){ termParam = 'IL2RA'; }
-			var tissueParam = $("input:radio[name=tissue]:checked").val();
-			renderHic(termParam, tissueParam, 1)
+			if (getQueryVariable("term") != undefined){ $("#search_term").val(getQueryVariable("term")); }
+			else if (localStorage.getItem("searchTerm")) { $("#search_term").val(localStorage.getItem("searchTerm")) }
+			doSearch();
 			
 		});
 	</script>
