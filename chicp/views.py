@@ -25,8 +25,9 @@ from django.core.mail import send_mail
 from chicp import chicp_settings
 from chicp import utils
 from elastic.elastic_settings import ElasticSettings
-from elastic.query import BoolQuery, Query, RangeQuery, Filter
+from elastic.query import BoolQuery, Query, RangeQuery, Filter, TermsFilter
 from elastic.search import Search, ElasticQuery, Sort
+from elastic.aggs import Agg, Aggs
 from elastic.exceptions import SettingsError
 from pydgin_auth.permissions import get_authenticated_idx_and_idx_types
 from pydgin_auth.elastic_model_factory import ElasticPermissionModelFactory as elastic_factory
@@ -301,27 +302,46 @@ def chicpeaSearch(request, url):
                 retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
                 return JsonResponse(retJSON)
     else:
-        geneQuery = ElasticQuery.query_string(searchTerm, fields=["gene_name"])
+        # geneQuery = ElasticQuery.query_string(searchTerm, fields=["gene_name"])
+        geneQuery = ElasticQuery.filtered(Query.match_all(), Filter(Query.match("gene_name", searchTerm).query_wrap()))
         resultObj = Search(idx=getattr(chicp_settings, 'CP_GENE_IDX') + '/genes/',
                            search_query=geneQuery, size=0, qsort=Sort('seqid:asc,start')).search()
         if resultObj.hits_total > 1:
             geneResults = []
             resultObj2 = Search(idx=getattr(chicp_settings, 'CP_GENE_IDX') + '/genes/', search_query=geneQuery,
                                 size=(resultObj.hits_total+1), qsort=Sort('seqid:asc,start')).search()
+
+            docs = resultObj2.docs
+            gene_ids = [getattr(doc, 'attr')['gene_id'][1:-1] for doc in docs]
+
+            query = ElasticQuery.filtered(Query.match_all(), TermsFilter.get_terms_filter('ensg', gene_ids))
+            agg = Agg('ensg_agg', "terms", {"field": "ensg", "size": 0})
+            res = Search(idx=ElasticSettings.idx('CP_TARGET_'+targetIdx), search_query=query, aggs=Aggs(agg),
+                         size=0).search()
+
+            ensg_count = res.aggs['ensg_agg'].get_buckets()
+            gene_ids = [g['key'] for g in ensg_count]
+
             for d in resultObj2.docs:
-                geneResults.append({
-                    'gene_name': getattr(d, "attr")["gene_name"].replace('\"', ''),
-                    'gene_id': getattr(d, "attr")["gene_id"].replace('\"', ''),
-                    'location': "chr" + getattr(d, "seqid") + ":" +
-                    locale.format_string("%d", getattr(d, "start"), grouping=True) + ".." +
-                    locale.format_string("%d", getattr(d, "end"), grouping=True),
-                })
-            retJSON = {
-                'error': 'Gene name <strong>'+searchTerm+'</strong> returns too many hits, please select your prefered result from the list below.',
-                'results': geneResults,
-                'cols': ['HGNC Symbol', 'Ensembl Gene ID', 'Location']
-            }
-            return JsonResponse(retJSON)
+                if getattr(d, "attr")["gene_id"].replace('\"', '') in gene_ids:
+                    geneResults.append({
+                        'gene_name': getattr(d, "attr")["gene_name"].replace('\"', ''),
+                        'gene_id': getattr(d, "attr")["gene_id"].replace('\"', ''),
+                        'location': "chr" + getattr(d, "seqid") + ":" +
+                        locale.format_string("%d", getattr(d, "start"), grouping=True) + ".." +
+                        locale.format_string("%d", getattr(d, "end"), grouping=True),
+                    })
+
+            if len(geneResults) == 0:
+                retJSON = {'error': 'Gene name '+searchTerm+' not found in this dataset.'}
+                return JsonResponse(retJSON)
+            elif len(geneResults) > 1:
+                retJSON = {
+                    'error': 'Gene name <strong>'+searchTerm+'</strong> returns too many hits, please select your prefered result from the list below.',
+                    'results': geneResults,
+                    'cols': ['HGNC Symbol', 'Ensembl Gene ID', 'Location']
+                }
+                return JsonResponse(retJSON)
 
         query_bool = BoolQuery()
         query_bool.must([RangeQuery("dist", gte=-2e6, lte=2e6)])
