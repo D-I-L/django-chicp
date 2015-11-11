@@ -35,7 +35,7 @@ class ChicpeaTestCase(TestCase):
 
     def test_page_returns_correct_html(self):
         ''' Test the content returned for the main CHiCP page. '''
-        response = self.client.get('/')
+        response = self.client.get('/chicp/')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'CHiCP', response.content)
 
