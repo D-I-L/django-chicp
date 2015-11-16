@@ -1,0 +1,151 @@
+{% extends "chicp/base.html" %}
+{% load staticfiles %}
+{% block header_css %}{% endblock %}
+{% block header_js %}{% endblock %}
+
+
+{% block sidebar_content %}
+	<h3><a href="#documentation">Documentation</a></h3>
+	<ul style="list-style-type: none;padding-left: 0;">
+		<li><h4 class="docs4"><a href="#visualizations">Visualizations</a></h4>		
+			<ul><li><h5><a href="#vis-circular">Circular Overview</a></h5></li>
+			<li><h5><a href="#vis-details">Details Panels</a></h5></li></ul>
+		</li>
+		<li><h4 class="docs4"><a href="#searching">Searching</a></h4>
+			<ul><li><h5><a href="#search-gene">Gene Search</a></h5></li>
+			<li><h5><a href="#search-variant">Marker Search</a></h5></li>
+			<li><h5><a href="#search-region">Region Search</a></h5></li></ul>
+		</li>
+		<li><h4 class="docs4"><a href="#pchic">Promoter Capture Datasets</a></h4>
+		<li><h4 class="docs4"><a href="#adding_data">Association Studies</a></h4></li>
+			<ul><li><h5 class="docs4"><a href="#assoc_stats">Adding Your Own Data</a></h5></li></ul>
+		</li>
+		<li><h4 class="docs4"><a href="#export">Exporting (SVG/PDF/PNG)</a></h4></li>
+	</ul>
+{% endblock %}
+
+{% block content %}
+				<a class="doc_link" name="documentation"></a><h1 class="page_header" id="page_header">Documentation</h1>				
+				<a class="doc_link" name="visualizations"></a>
+				<h3 class="docs3">Visualizations</h3>
+				<p>The CHiCP user interface consists of a left-hand search toolbox (see section on <a href="#searching">Searching</a> below), a central circular overview panel and two right-hand detail panels.</p>
+				
+				<a class="doc_link" name="vis-circular"></a>
+				<h4 class="docs4"><img src="{% static "chicp/images/vis-circular.png" %}" style="float:right;" />Circular Overview</h4>
+				<p>The main circular panel in CHiCP displays data dependent on the user selections within the search toolbox.</p>
+				<h5 class="subheader">Interactions (A)</h5>
+				<p>Interactions are displayed centrally as coloured connecting lines between restriction fragments, where a colour scale represents the selected PCHi-C study interaction score.  Grey represents those interactions that are described in the study but are currently below threshold for the selected tissue context.  Users can alter the scale and threshold values using the top-right "Settings" link.</p>
+				<p>Interactions are responsive to user mouse events, hi-lighting the interactions and displaying textual score information. Furthermore, arcs at each end of the interaction represent the extend of the bait (blue) and target (red) fragments.  Users can select (click) an interaction, toggling hi-lighting and updating the fragment detail panels (see below).</p>
+				
+				<h5 class="subheader">Study Associations (B)</h5>
+				<p>The inner track represents wither user uploaded or study association statistics data.  CHiCP currently copes with user uploaded data with scores transformed to the -log<sub>10</sub>(P) scale.  Datasets offered within CHiCP currently support both -log<sub>10</sub>(P) scaled and Posterior Probability Interval (PPI) scores.  Variants shown in green are either genome-wide significant (P &lt; 5 x 10<sup>-8</sup>) or PPI &gt; 0.01.</p>
+				<p>Users can mouse over points to obtain textual information; further selection (click) will execute a search using the selected variant name.</p>
+				
+				<h5 class="subheader">Gene Details (C)</h5>
+				<p>The middle track shows the location of Ensembl gene annotations, rendered as coloured arrows, with the colours representing gene biotype and the arrow direction the strand of transcription.  If a gene is the current search focus it is hi-lighted in yellow.</p>
+				<table class="table-condensed" style="border:1px solid black">
+				  <tr>
+					<td bgcolor="#1f77b4">&nbsp;</td>
+					<td>Protein Coding</td>
+					<td bgcolor="#2ca02c">&nbsp;</td>
+					<td>lincRNA</td>
+					<td bgcolor="#d62728">&nbsp;</td>
+					<td>snoRNA</td>
+					<td bgcolor="#ff7f0e">&nbsp;</td>
+					<td>miscRNA</td>
+					<td bgcolor="#9467bd">&nbsp;</td>
+					<td>Antisense</td>
+					<td bgcolor="#bcbd22">&nbsp;</td>
+					<td>Processd Transcript</td>
+					<td bgcolor="#7f7f7f">&nbsp;</td>
+					<td>Pseudogene</td>
+					<td bgcolor="#8c564b">&nbsp;</td>
+					<td>snRNA</td>
+					<td bgcolor="#e377c2">&nbsp;</td>
+					<td>miRNA</td>
+				  </tr>
+				</table>
+				<p>Again users can mouse over genes to obtain more information with a further selection executing a gene specific search.</p>
+				
+				<h5 class="subheader">Genomic Scale & Restriction Sites (D)</h5>
+				<p>The outermost track, the circle circumference, represents a scale detailing the current genomic interval overlaid with red tick marks representing the boundaries of the relevant restriction enzyme cleavage sites for the currently selected PCHi-C study.</p>
+				<p>By clicking, holding and then dragging within this track users can select a subset of the current region in order to zoom in and update the display.  Clicking the grey wedge at the top of the circle resets the zoom to the previous view.<img src="{% static "chicp/images/vis-selection.png" %}" /></p>
+				<p>As users make selections and undertake new queries a history of all previous views is updated as a set of breadcrumbs above the visualization panels, which allow the user to easily revert to previous views/searches.</p> 
+				
+				
+				<a class="doc_link" name="vis-details"></a>
+				<h4 class="docs4">Detail Panels</h4>
+				<img src="{% static "chicp/images/vis-details.png" %}" style="float:right;" />
+				<p>When interactions are selected, the two details panels are updated.  The blue panel represents the bait and the red panel the target restriction fragments.  These are laid out as three tracks with a genomic scale along the bottom, comparable to the linear browser archetype.</p>
+				<p>Starting from the top these entail a Manhattan plot representing the selected Study Associations track (PPI or -log<sub>10</sub>(P)) data.</p>
+				<p>The next track down details canonical gene transcripts coloured by biotype, where exons with a white fill represent those containing transcriptional start sites.</p>
+				<p>The third track details any chromatin segmentation or roadmap information available for the selected tissue context, coloured by state.</p>
+				<p>Users can mouse over various features to obtains further textual information on these.</p>
+				
+				
+				
+				<a class="doc_link" name="searching"></a>
+				<h3 class="docs3">Searching</h3>
+				The purpose of the search toolbox (in the left-hand sidebar) is to allow searching, either by gene, variant or region of interest and to allow browsing and selection of available datasets to integrate.
+				<a class="doc_link" name="search-gene"></a>
+				<h4 class="docs4"><img src="{% static "chicp/images/search-gene.png" %}" style="float:left;" />Gene Search</h4>
+				<p>Searching for genes can be done using either the gene name (e.g. NRIP1) or the Ensembl gene identifier (e.g. ENSG00000180530). Using the entered search term, CHiCP searches the selected PCHi-C study for all baits overlapping that gene.  The search is done over the first 2 columns of the loaded peak matrix file, so exact positional match will depend on the data loaded.  Most peak matrix files associate baits with genes &plusmn; 500bp so only baits slightly up or downstream of the gene should also be returned.</p>
+				<p>The gene which is the current search focus is hi-lighted in yellow on the CHiCP diagram.</p>
+				<p>Searching in CHiCP is set to look for target interactions &plusmn; 2MB of the gene. The view-port shown is then scaled to show all interactions found &plusmn; 5% of the total length.  Thus the size of the region displayed will change with larger genes and those that have more distal interactions.</p>
+				<p>Clicking on any gene on the diagram will redo the search for the new gene.</p>
+				
+				<a class="doc_link" name="search-variant"></a>
+				<h4 class="docs4"><img src="{% static "chicp/images/search-marker.png" %}" style="float:left;" />Variant Search</h4>
+				<p>Searching for variants is done by dbSNP rs id (e.g. rs1736020).  The currently selected Association Studies dataset is queried to get the variant position and then the promote capture dataset is queried to find overlapping interactions.  The diagram shows the location of the variant with a red line across all the tracks.</p>
+				<p>If the variant cannot be found in the selected association study data then an error message is returned, please try changing the study association dataset or search for a different variant.</p>
+				
+				<a class="doc_link" name="search-region"></a>
+				<h4 class="docs4"><img src="{% static "chicp/images/search-region.png" %}" style="float:left;" />Region Search</h4>
+				<p>Searching for regions of interest is done using chromosomal location (e.g. chr21:16165420-16959712 or 21:16165420-16959712 - the 'chr' is not required). This will search the PCHi-C study for any interaction that overlaps the requested region.</p>
+				<p><strong>Please note</strong> this can produce a very large result set so could be detrimental to your browser and make it unresponsive.</p>
+				<p>The resulting diagram returned exactly matches the chromosomal location searched for.  This means that some interaction may have their bait or target within the region but the other end of the interaction lies outside of the region. These results are still shown with lines leading to the edge of the wedge at the top of the diagram. Clicking on the interactions still allows you to visualise both ends of the interaction, including the end located outside of the region.</p>
+				
+				
+				<a class="doc_link" name="pchic"></a>
+				<h3 class="docs3">Promoter Capture Datasets</h3>
+				<img src="{% static "chicp/images/pchic.png" %}" style="float:left;padding-bottom: .5em;padding-right: 0.5em;" />
+				<p>CHiCP is able to display any promoter-capture data loaded from peak matrix files (see <a href="#elasticsearch">Elasticsearch</a> section above). We currently display public data from the <a href="http://www.ncbi.nlm.nih.gov/pubmed/25938943" target="_blank">Misfud <em>et al.</em></a> publication on <a href="http://www.chicp.org">chicp.org</a> as well as offering private datasets under the login system. On standalone systems, you can set up your own datasets by building the elastic indexes and then configuring in the settings.py file.</p>
+				<p>Each dataset is listed in the drop-down menu underneath the search toolbox. Changing the dataset results in the list of tissues below being updated and the interactions being replaced in the centre of the cirucalr visulization. Changing selection of the tissue radio buttons alters the colouring of the interactions based on the score of the selected tissue.</p>
+				<p>Colouring of the interactions is done based on the score of the interaction, with a coloured range from <span style="color:blue">blue</span> to <span style="color:red">red</span>.  Grey represents those interactions that are described in the study but are currently below threshold for the selected tissue context.</p>
+				
+				
+				
+				<a class="doc_link" name="assoc_stats"></a>
+				<h3 class="docs3"><img src="{% static "chicp/images/studies.png" %}" style="float:right;padding-bottom: .5em;padding-left: 0.5em;width:500px;" />Association Studies</h3>
+				<p>Changing the selected study in this drop-down menu will change the snp track.  Only one set of study data can be shown at any given time.</p>
+				<p>Datasets listed are grouped together for ease of use. Again, on standalone systems, you can set up your own datasets by building the elastic indexes and then configuring in the settings.py file.</p>
+							
+				
+				<a class="doc_link" name="adding_data"></a>
+				<h4 class="docs4" style="clear:left;">Adding Your Own Data</h4>
+				<p>As well as the studies offered by the website, many researchers also want to see how their own list of markers look alongside interactions, so we have built-in a way for the user to upload their own data (you need to have accepted our site cookies and access agreement for this).</p>
+				<p>NB. Files must be in <a href="https://genome.ucsc.edu/FAQ/FAQformat.html#format1" target="_blank">BED5 format</a>, preferably with tab-separation.</p>
+				<h5 class="subheader">To upload your own text files:</h5>
+				<ol>
+					<li>Click "Upload Your Own Data" below the list of association studies</li>
+					<li>A modal dialog box will appear - either drag your file to the "Drop files here" area or click "Choose Files" and navigate to your file.</li>
+					<li>The site will upload your file to a temporary location on our server</li>
+					<li>Click OK to create the searchable index and add the data to the website</li>
+					<li>Once ready, your dataset will be available in the drop-down menu in the Association Studies toolbox</li>
+					<li>Your data will be stored on our server for 7 days. If you want to delete it yourself, click "Settings" from the main page, then click the <i class="fa fa-trash-o"></i> icon next to the dataset you wish to remove</li>
+				</ol>
+				<img src="{% static "chicp/images/data-upload.png" %}" style="padding-bottom: .5em;width:100%;" />
+				
+				
+				<a class="doc_link" name="export"></a>
+				<h3 class="docs3"><img src="{% static "chicp/images/export-svg-pdf-png.png" %}" style="float:right;" />Exporting (SVG/PDF/PNG)</h3>
+				<p>CHiCP offers you the ability to export the generated SVG images, via buttons on the right-hand side of the page header, and save them to your computer for use in publications. SVG format is editable in either a basic text editor or in more advanced software such as Adobe Illustrator, to allow to to annotate your diagrams and add useful labels.  PNG/PDF format are read-only formats of exactly what is one the screen.</p>
+				<p>To export in any one of the formats, set the diagram up as you wish, with genes/markers/interactions selected as required and simply click the export button and the result will be downloaded to your computer.</p>
+				<img src="{% static "chicp/images/CHiCP-NRIP1-CD34.png" %}" style="width:100%" />
+				
+{% endblock %}
+
+
+{% block footer %}
+	<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+{% endblock %}
