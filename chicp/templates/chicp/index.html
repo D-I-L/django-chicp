@@ -96,10 +96,10 @@
 							</div>
 						</div>
 					</div>
-					{% if snpTracks|length > 0 %}
 					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
 						<div class="panel-heading">Association Studies</div>
 						<div class="panel-body">
+						{% if snpTracks|length > 0 %}
 							<div class="form-group" style="width:100%">
 								<select class="form-control gwas" name="gwas" id="gwas" onchange="switch_snp_track(this)" style="width:100%">
 								{% for group, tracks in snpTracks.items %}
@@ -122,9 +122,11 @@
 								<button id="open_btn" class="btn btn-primary btn-block" type="button">Upload Your Own Data</button>
 							</form>
 							{% endif %}
+						{% else %}
+						<p>To view these data please login via the button in the top right-hand corner.</p>
+						{% endif %}
 						</div>
 					</div>
-					{% endif %}
 				</ul>
 {% endblock %}
 
