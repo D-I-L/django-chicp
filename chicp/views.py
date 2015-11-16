@@ -65,13 +65,19 @@ def contactUs(request):
     return HttpResponseForbidden(json.dumps(retJSON))
 
 
-def chicpeaDocs(request):
+def chicpeaDocs(request, subPage=""):
+    print(subPage)
+    if subPage == "":
+        subPage = "index.html"
+    else:
+        subPage = subPage+".html"
+
     context = dict()
     context['title'] = 'CHiCP Documentation'
     context['page_header'] = 'Documentation'
     context['admin_url_path'] = settings.ADMIN_URL_PATH
     context['RECAPTCHA_KEY'] = settings.RECAPTCHA_KEY
-    return render(request, 'chicp/docs.html', context, content_type='text/html')
+    return render(request, 'chicp/docs/'+subPage, context, content_type='text/html')
 
 
 def chicpea(request):

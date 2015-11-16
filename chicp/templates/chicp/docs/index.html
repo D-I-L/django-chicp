@@ -5,11 +5,8 @@
 
 
 {% block sidebar_content %}
-	<h3><a href="#quick-start">Quick Start Guide</a></h3>
 	<h3><a href="#documentation">Documentation</a></h3>
 	<ul style="list-style-type: none;padding-left: 0;">
-		<li><h4 class="docs4"><a href="#installation">Installation</a></h4></li>
-		<li><h4 class="docs4"><a href="#elasticsearch">Elasticsearch</a></h4></li>
 		<li><h4 class="docs4"><a href="#visualizations">Visualizations</a></h4>		
 			<ul><li><h5><a href="#vis-circular">Circular Overview</a></h5></li>
 			<li><h5><a href="#vis-details">Details Panels</a></h5></li></ul>
@@ -28,139 +25,7 @@
 {% endblock %}
 
 {% block content %}
-				<a class="doc_link" name="quick-start"></a><h1 class="page-header" id="page_header">Quick Start Guide</h1>
-				<a class="doc_link" name="documentation"></a><h1 class="page-header" id="page_header">Documentation</h1>
-				<a class="doc_link" name="installation"></a>
-				<h3 class="docs3">Installation</h3>
-				<p>CHiCP is a Python3 <a href="https://www.djangoproject.com/" target="_blank">Django</a> application to visualize HiC interactions.  
-				The code is freely available in <a href="https://github.com/D-I-L/django-chicpea" target="_blank">GitHub</a> and can be easily set-up to visualize 
-				your own data alongside publicly available data.</p>
-				<div class="panel panel-info">
-  					<div class="panel-body">
-						We have tested installation of CHiCP on Ubuntu Linux systems (14.04). The following prerequisite packages must be installed via aptitude...<br />
-						<ul>
-							<li>libffi-dev</li>
-							<li>libxml2-dev</li>
-							<li>libxslt1-dev</li>
-						</ul>
-					</div>
-				</div>
-				<h4 class="docs4">Installation Steps</h4>
-				<ol>
-					<li class="subheader">Download &amp; Installation</li>
-					<strong>NB.</strong> The export to SVG uses <a href="https://github.com/btel/svg_utils" target="_blank">svg_utils</a>, the sed command below fixes an issue.
-					<div class="well">
-						<code class="prettyprint">
-						PYENV_HOME=/dir/to/install/.py-env<br />
-						pip install -e git://github.com/D-I-L/django-chicpea.git#egg=chicp<br />
-					    pip install --exists-action w -r $PYENV_HOME/src/chicp/chicp/requirements.txt <br />
-					    sed -i 's|from transform import|from svgutils.transform import|' $PYENV_HOME/src/svgutils/src/svgutils/templates.py
-						</code>
-					</div>
-					<li class="subheader">Setting up the Django App</li>
-					CHiCP requires Django. It can be run on it's own in which case you will need to set up a django project, or can be added to an existing project as an app.
-					<div class="well">
-						<code class="prettyprint">
-						django-admin startproject projCHICP<br />
-						cd projCHICP
-						</code>
-					</div>
-					Once you have a Django project, edit the settings.py file to add CHiCP to the list of installed apps.
-					<div class="well">
-						<code class="prettyprint">
-						INSTALLED_APPS = (</br/>
-						    ...<br />
-						    'chicp',<br />
-						)
-						</code>
-					</div>
-					Include the CHiCP URLconf in your project urls.py like this:
-					<div class="well">
-						<code class="prettyprint">
-						 url(r'^chicp/', include('chicp.urls', namespace="chicp")),
-						</code>
-					</div>
-					<li class="subheader">Setting up CHiCP</li>
-					The chicp_settings_template.py file, located in the root of the app, is where everything can be configured.  CHiCP uses Elasticsearch in the back-end to serve the data 
-					(please see the Elastic section below for more information on creating indexes).<br />
-					To add extra cell-specific sample data to be displayed in the Target/Bait boxes you need to upload 
-					<a href="http://genome.ucsc.edu/goldenpath/help/bigBed.html" target="_blank">BigBed format</a> files to static/chicp/data/.<br />
-					<div class="well">
-						<pre class="prettyprint" style="border:0px;">
-CHICP_IDX - An ordered dictionary of elastic indexes which make up the snp track options
-          - The grouping set up in the settings file is used to build &lt;optgroup&gt; sections in the frontend
-     EG. CHICP_IDX = OrderedDict([
-          	('gwas', {'NAME': 'GWAS Statistics', 'INDEX': 'cp:hg19_gwas_bed', 'DATA_TYPE': 'log10p', 'TRACKS':
-          		OrderedDict([
-          			('gwas-barrett', {'NAME': 'T1D - Barrett et al.', 'TYPE': 't1d_barrett'})
-          		])
-          	}
-          )])
-
-sampleLookup - BigBed format files to show extra data for specific cell types in the Bait/Target boxes
-     EG. sampleLookup = {'CD34': ['E035', 'E036', 'E050', 'E051']}
-			
-stateLookup - List states found in the sample files that have no desc or color attributes
-     EG. stateLookup = {'9_Het': {'desc': "Heterochromatin", 'color': '138,145,208'}}
-
-DEFAULT_TARGET - The default index to be selected for Promoter Capture Datasets
-DEFAULT_TISSUE - The default tissue to be selected for the DEFAULT_TARGET
-DEFAULT_TRACK - The default Association Studies track to be selected
-DEFAULT_FRAG - The default restriction sites index to be used
-CP_GENE_IDX - The name of the gene details index
-
-TARGET_IDXS - List all Promoter Capture Dataset indexes available
-
-STUDY_DEFAULTS - Configure details for the "Association Study" types</pre>
-					</div>
-				</ol>
-				<a class="doc_link" name="elasticsearch"></a>
-				<h3 class="docs3">Elasticsearch</h3>
-				The data required to run an instance of CHiCP uses Elasticsearch to build object index stores and to facilitate querying.  
-				Scripts to build and load all the required indexes can be found in <a href="https://github.com/D-I-L/django-elastic">django-elastic on GitHub</a> - 
-				a required app installed during installation step 1 above - and can be run through the Django manage.py<br />
-				Elastic allows you to build individual indexes for each set of data that you wish to add. However, we tend to build less indexes with separate types 
-				for the different dataset (eg. One index for all GWAS studies, each individual study being a type).<br />
-				When running the loader specifying the --help flag will list all options.
-				<div class="well"><pre class="prettyprint" style="border:0px;">
-./manage.py index_search --help
-				
-OPTIONS
---indexName=INDEXNAME	Index name
---indexType=INDEXTYPE	Index type - use this to create a type per dataset</pre></div>
-				<ul>
-				<li class="subheader">Promoter Capture Datasets</li>
-				Flat files need to be in an adapted peak matrix format.
-				<div class="well"><pre class="prettyprint" style="border:0px;">Required columns (variable columns afterwards for each cell type - see example)
-ensg    name    biotype    strand    #baitChr    baitStart baitEnd    baitID    baitName    oeChr    oeStart    oeEnd oeID    oeName    dist
-
-E.g.
-ensg	name	biotype	strand	#baitChr	baitStart	baitEnd	baitID	baitName	oeChr	oeStart	oeEnd	oeID	oeName	dist	GM12878	CD34	
-ENSG00000252146	AL390776.1	miRNA	-	1	44795296	44800009	10003	NA	1	44815789	44830580	10009	NA	25532	12.3394811130152	12.5828476159992</pre></div>
-				Use the following example command to load your data.
-				<div class="well"><pre class="prettyprint" style="border:0px;">
-./manage.py index_search --indexName cp:hg19_mifsud_pm --indexType gene_target --indexGTarget file.pm</pre></div>
-				<li class="subheader">Association Studies</li>
-				Details of chromosome, position, name and score are needed to generate the association studies tracks so a <a href="https://genome.ucsc.edu/FAQ/FAQformat.html#format1" target="_blank">BED5 format</a> is suggested.<br /> 
-				<div class="well"><pre class="prettyprint" style="border:0px;">Example BED5 Format (-log10p type)
-chr1	114377567	114377568	rs2476601	92.22	
-
-Example BED5 Format (ppi type)
-chr1	114377567	114377568	rs2476601	0.586</pre></div>
-				Use the following example command to load your data.
-				<div class="well"><pre class="prettyprint" style="border:0px;">
-./manage.py index_search --indexName cp:hg19_gwas_bed --indexType t1d_barrett --indexBED file.bed</pre></div>
-				<li class="subheader">Gene Details</li>
-				The gene details index is built straight from the Ensembl GTF file that you can download from their 
-				<a href="http://www.ensembl.org/info/data/ftp/index.html" target="_blank">FTP site</a> and then loaded as shown below.
-				<div class="well"><pre class="prettyprint" style="border:0px;">
-./manage.py index_search --indexName cp:hg19_gene_details --indexType genes --indexGFF file.gtf --isGTF</pre></div>
-				<li class="subheader">Enzyme Restriction Sites</li>
-				</ul>
-				
-				
-				
-				
+				<a class="doc_link" name="documentation"></a><h1 class="page_header" id="page_header">Documentation</h1>				
 				<a class="doc_link" name="visualizations"></a>
 				<h3 class="docs3">Visualizations</h3>
 				<p>The CHiCP user interface consists of a left-hand search toolbox (see section on <a href="#searching">Searching</a> below), a central circular overview panel and two right-hand detail panels.</p>
