@@ -47,7 +47,13 @@
             <div class="navbar-collapse collapse">
 				<ul class="nav navbar-nav">
 					<li><a href="#ContactModal" data-toggle="modal"><i class="fa fa-envelope"></i>&nbsp;Contact Us</a></li>
-					<li><a href="docs"><i class="fa fa-file"></i>&nbsp;Documentation</a></li>
+					<li id="docs" class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-file"></i>&nbsp;Documentation<b class="caret"></b></a>
+						<ul class="dropdown-menu">
+							<li><a href="/chicp/docs/quickstart/"> QuickStart Guide</a></li>
+							<li><a href="/chicp/docs/"> Full Documentation</a></li>
+							<li><a href="/chicp/docs/installation/"> Installation</a></li>
+						</ul>
+					</li>
 					{% block menu_items %}{% endblock %}
 				</ul>
 				<ul class="nav navbar-nav navbar-right">
