@@ -154,7 +154,7 @@
 				<ol class="breadcrumb no-print" id="breadcrumb">
 					<li><a href="/chicp/">Start</a></li>
 				</ol>
-				<div class="row svg-row" style="max-height:720px;">
+				<div id="svg-row" class="row svg-row" style="max-height:720px;">
 					<div class="col-sm-12 col-lg-6">
 						<div id="svg-container"></div>
 					</div>
@@ -283,20 +283,17 @@
 			baitSVG = "";
 			targetSVG = "";
 			svgWidth = $("#main-svg").width()
-			svgHeight = $("#main-svg").height()
+			//svgHeight = $("#main-svg").height()
+			svgHeight = $("#svg-row").height()
 
 			if ($("svg").length == 3) {
 				baitSVG = (new XMLSerializer).serializeToString($("#bait-svg")[0]);
 				targetSVG = (new XMLSerializer).serializeToString($("#target-svg")[0]);
 				svgWidth += $("#panel-bait").width();
 				svgHeight2 = $("#panel-bait").height() + $("#panel-target").height()
-				console.log($("#panel-target").height())
 				if (svgHeight2 > svgHeight)
 					svgHeight = svgHeight2
 			}
-			
-			console.log(svgHeight)
-			return;
 
 			// Submit the <FORM> to the server.
 			// The result will be an attachment file to download.
