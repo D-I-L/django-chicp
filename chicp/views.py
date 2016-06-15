@@ -647,7 +647,7 @@ def _build_frags_query(frags_idx, chrom, segmin, segmax):
     query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                   Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                   utils.bedFields)
-    fragsQuery = Search(search_query=query, search_from=0, size=2000000, idx=frags_idx)
+    fragsQuery = Search(search_query=query, search_from=0, size=10000, idx=frags_idx)
 
     # fragsResult = fragsQuery.get_result()
     # frags = fragsResult['data']

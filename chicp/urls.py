@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, url
+from django.http import HttpResponse
 from chicp import views
 
 urlpatterns = patterns('',
@@ -11,4 +12,5 @@ urlpatterns = patterns('',
                        url(r'^fileUpload(.*)$', views.chicpeaFileUpload, name='chicpeaFileUpload'),
                        url(r'^download(.*)$', views.chicpeaDownload, name='chicpeaDownload'),
                        url(r'^deleteUserData(.*)$', views.chicpeaDeleteUD, name='chicpeaDeleteUD'),
+                       (r'^robots\.txt/$', lambda r: HttpResponse("User-agent: *\nDisallow: /*", content_type="text/plain"))
                        )

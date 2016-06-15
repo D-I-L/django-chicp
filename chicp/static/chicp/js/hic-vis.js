@@ -4,7 +4,7 @@ var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.45 + ")";
 
 var snpCutoff, maxscore, thresh
 
-var interactionColor = d3.scale.linear().domain([0, 20]).range(["blue", "red"]);
+var interactionColor = d3.scale.linear().domain([0, 30]).range(["blue", "red"]);
 var start, CHR, totalBP, region, META;
 var pi = Math.PI;  
 var selecting = 0;
@@ -732,14 +732,14 @@ function addSNPTrack(snps, snpMeta){
 	var snpBackground = vis.append("g").attr("class", "track snps background").selectAll("svg")
 		.data([1]).enter();
 	
-	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.3).attr("transform", trans);
-	if (maxscore >= snpCutoff){
-		snpBackground.append("path")
-		.attr("d", d3.svg.arc()
-			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
-			.startAngle(startAngle).endAngle(endAngle)
-		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
-	}
+	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.1).attr("transform", trans);
+//	if (maxscore >= snpCutoff){
+//		snpBackground.append("path")
+//		.attr("d", d3.svg.arc()
+//			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
+//			.startAngle(startAngle).endAngle(endAngle)
+//		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
+//	}
 }
 
 function addSNPTrackPoints(snps, snpMeta, totalBP){
@@ -747,24 +747,31 @@ function addSNPTrackPoints(snps, snpMeta, totalBP){
 	var vis = d3.select("#main-svg");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	var innerRadius = diameter * 0.29;
+	var colors = d3.scale.linear().domain([2, 50]).range(["lightgrey", "black"]);
 	
 	var symb = d3.svg.symbol();
 	symb.size(15);
-	vis.append("g").attr("class", "track snps cookie_hide").selectAll("svg")
+	vis.append("g").attr("class", "track snps genes cookie_hide").selectAll("svg")
 		.data(snps.filter(function (d) {
 				return parseFloat(d.score) >= thresh;
 		}))
 		.enter()
 		.append("path")
-		.attr("transform", function (d) {
-				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
+//		.attr("transform", function (d) {
+//				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
+//		})
+//		.attr("class", "snp")
+		.attr("d", function (d) {console.log(d.start+"-"+d.end); return (computeStrandPath(d.start, d.end, innerRadius+15, totalBP)) } )
+		.attr("class", "gene")
+		.attr("stroke", function(d){
+			return colors(d.score)
 		})
-		.attr("class", "snp")
-		.attr("d", symb)
-		.attr("fill", function (d) {
-				if (parseFloat(d.score) >= snpCutoff) return "green";
-				return "darkgrey";
-		})                                                    
+		.attr("transform", trans)
+//		.attr("d", symb)
+//		.attr("fill", function (d) {
+//				if (parseFloat(d.score) >= snpCutoff) return "green";
+//				return "darkgrey";
+//		})                                                    
 		.on("click", function (d) {
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
