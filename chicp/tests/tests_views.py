@@ -64,6 +64,13 @@ class ChicpeaTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'chicp/index.html')
 
+    def test_page_for_error(self):
+        ''' Test CHiCP page with EnsEMBL Gene '''
+        geneName = 'vas[3'
+        response = self.client.get(reverse('chicp:chicp') + '?term='+geneName)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'chicp/index.html')
+
     def test_search(self):
         ''' Test the CHiCP search. '''
         found = resolve('/chicp/search/')

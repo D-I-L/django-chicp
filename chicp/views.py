@@ -280,6 +280,8 @@ def chicpeaSearch(request, url):
                                            sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
         (hic, v1, v2) = _build_hic_query(query, targetIdx, segmin, segmax)  # @UnusedVariable
 
+        if "error" in hic:
+            return JsonResponse(hic)
         if len(hic) == 0:
             retJSON = {'error': queryDict.get("searchTerm")+' does not overlap any bait/target regions in this dataset.'}
             return JsonResponse(retJSON)
@@ -304,6 +306,8 @@ def chicpeaSearch(request, url):
                                                sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
             hic, segmin, segmax = _build_hic_query(query, targetIdx)
 
+            if "error" in hic:
+                return JsonResponse(hic)
             if len(hic) == 0:
                 retJSON = {'error': 'Marker '+searchTerm+' does not overlap any bait/target regions in this dataset.'}
                 return JsonResponse(retJSON)
@@ -355,8 +359,10 @@ def chicpeaSearch(request, url):
         query = ElasticQuery.filtered_bool(Query.query_string(searchTerm, fields=["name", "ensg", "oeName"]),
                                            query_bool, sources=utils.hicFields + utils.tissues['CP_TARGET_'+targetIdx])
 
-        hic, segmin, segmax = _build_hic_query(query, targetIdx)
+        (hic, segmin, segmax) = _build_hic_query(query, targetIdx)
 
+        if "error" in hic:
+            return JsonResponse(hic)
         if len(hic) == 0:
             retJSON = {'error': 'Gene name '+searchTerm+' not found in this dataset.'}
             return JsonResponse(retJSON)
@@ -512,6 +518,8 @@ def _build_hic_query(query, targetIdx, segmin=0, segmax=0):
     hicElastic = Search(query, idx=ElasticSettings.idx('CP_TARGET_'+targetIdx), search_from=0, size=2000)
     # hicResult = hicElastic.get_result()
     hicResult = hicElastic.get_json_response()
+    if "error" in hicResult:
+        return {'error': 'No search results found. Please try again.'}, segmin, segmax
     if len(hicResult['hits']['hits']) > 0:
         for hit in hicResult['hits']['hits']:
             hic.append(hit['_source'])
@@ -639,7 +647,7 @@ def _build_frags_query(frags_idx, chrom, segmin, segmax):
     query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                   Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                   utils.bedFields)
-    fragsQuery = Search(search_query=query, search_from=0, size=2000000, idx=frags_idx)
+    fragsQuery = Search(search_query=query, search_from=0, size=10000, idx=frags_idx)
 
     # fragsResult = fragsQuery.get_result()
     # frags = fragsResult['data']
