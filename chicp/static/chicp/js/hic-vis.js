@@ -747,31 +747,24 @@ function addSNPTrackPoints(snps, snpMeta, totalBP){
 	var vis = d3.select("#main-svg");
 	var tissue = $("input:radio[name=tissue]:checked").val();
 	var innerRadius = diameter * 0.29;
-	var colors = d3.scale.linear().domain([2, 50]).range(["lightgrey", "black"]);
 	
 	var symb = d3.svg.symbol();
 	symb.size(15);
-	vis.append("g").attr("class", "track snps genes cookie_hide").selectAll("svg")
+	vis.append("g").attr("class", "track snps cookie_hide").selectAll("svg")
 		.data(snps.filter(function (d) {
 				return parseFloat(d.score) >= thresh;
 		}))
 		.enter()
 		.append("path")
-//		.attr("transform", function (d) {
-//				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
-//		})
-//		.attr("class", "snp")
-		.attr("d", function (d) {console.log(d.start+"-"+d.end); return (computeStrandPath(d.start, d.end, innerRadius+15, totalBP)) } )
-		.attr("class", "gene")
-		.attr("stroke", function(d){
-			return colors(d.score)
+		.attr("transform", function (d) {
+				return (computePointPath(d.start, d.end, d.score, thresh, maxscore, innerRadius, totalBP, diameter))
 		})
-		.attr("transform", trans)
-//		.attr("d", symb)
-//		.attr("fill", function (d) {
-//				if (parseFloat(d.score) >= snpCutoff) return "green";
-//				return "darkgrey";
-//		})                                                    
+		.attr("class", "snp")
+		.attr("d", symb)
+		.attr("fill", function (d) {
+				if (parseFloat(d.score) >= snpCutoff) return "green";
+				return "darkgrey";
+		})                                                    
 		.on("click", function (d) {
             	$("#search_term").val(d.name);
             	var term = $("#search_term").val()
