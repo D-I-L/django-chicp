@@ -4,7 +4,7 @@ var trans = "translate(" + diameter * 0.5 + "," + diameter * 0.45 + ")";
 
 var snpCutoff, maxscore, thresh
 
-var interactionColor = d3.scale.linear().domain([0, 30]).range(["blue", "red"]);
+var interactionColor = d3.scale.linear().domain([0, 20]).range(["blue", "red"]);
 var start, CHR, totalBP, region, META;
 var pi = Math.PI;  
 var selecting = 0;
@@ -732,14 +732,14 @@ function addSNPTrack(snps, snpMeta){
 	var snpBackground = vis.append("g").attr("class", "track snps background").selectAll("svg")
 		.data([1]).enter();
 	
-	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.1).attr("transform", trans);
-//	if (maxscore >= snpCutoff){
-//		snpBackground.append("path")
-//		.attr("d", d3.svg.arc()
-//			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
-//			.startAngle(startAngle).endAngle(endAngle)
-//		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
-//	}
+	snpBackground.append("path").attr("d", arc).style("fill", "lightgrey").style("opacity", 0.3).attr("transform", trans);
+	if (maxscore >= snpCutoff){
+		snpBackground.append("path")
+		.attr("d", d3.svg.arc()
+			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
+			.startAngle(startAngle).endAngle(endAngle)
+		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
+	}
 }
 
 function addSNPTrackPoints(snps, snpMeta, totalBP){
