@@ -1,6 +1,6 @@
 -e git+https://github.com/btel/svg_utils.git#egg=svgutils
--e git+https://github.com/D-I-L/django-elastic.git@0.0.1#egg=elastic
--e git+https://github.com/D-I-L/django-pydgin-auth.git@develop#egg=pydgin_auth
+-e git+https://github.com/D-I-L/django-elastic.git#egg=elastic
+-e git+https://github.com/D-I-L/django-pydgin-auth.git#egg=pydgin_auth
 
 Django>=1.8
 CairoSVG==1.0.13
