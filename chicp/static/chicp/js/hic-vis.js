@@ -220,7 +220,8 @@ function renderHic(term, tissue, breadcrumb) {
 	resetPage(term, tissue, breadcrumb)
 	
 	url = "/chicp/search?searchTerm=" + term + '&tissue=' + tissue+'&targetIdx='+targetIdx;
-	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
+	if (gwas != "" && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
+//	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
 	if (region != "") url += '&region='+region;
 	$("#regionSearch").val("");
 	
@@ -738,7 +739,7 @@ function addSNPTrack(snps, snpMeta){
 		.attr("d", d3.svg.arc()
 			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
 			.startAngle(startAngle).endAngle(endAngle)
-		).style("fill", "white").attr("class", "cookie_hide").attr("transform", trans);
+		).style("fill", "white").attr("transform", trans);
 	}
 }
 
@@ -750,7 +751,7 @@ function addSNPTrackPoints(snps, snpMeta, totalBP){
 	
 	var symb = d3.svg.symbol();
 	symb.size(15);
-	vis.append("g").attr("class", "track snps cookie_hide").selectAll("svg")
+	vis.append("g").attr("class", "track snps").selectAll("svg")
 		.data(snps.filter(function (d) {
 				return parseFloat(d.score) >= thresh;
 		}))
@@ -980,8 +981,9 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 		
 //	var div = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
 	var url = "/chicp/subSearch?region=" + region + '&tissue=' + tissue;
-    var gwas = $("#gwas").val();    
-	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
+    var gwas = $("#gwas").val();
+	if (gwas != "" && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
+//	if (gwas != "" && $.cookie('cb-enabled') == 'accepted' && gwas !==null && gwas !==undefined) url += '&snp_track=' + gwas;
     
     $("#panel-" + type).isLoading({ text: "Loading", position: "overlay" });
 		
@@ -1056,7 +1058,7 @@ function drawRegionPanel(type, chr, start, end, maxscore) {
 				.attr("transform", "rotate(-90)")
 				.text(data.snp_meta.score_text);
 				
-			var snp = svgContainer.append("g").attr("class", "track snps cookie_hide").attr("id", type+"SNPTrack")
+			var snp = svgContainer.append("g").attr("class", "track snps").attr("id", type+"SNPTrack")
 				.selectAll(".snp")
 				.data(data.snps)
 				.enter().append("g")
