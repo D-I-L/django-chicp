@@ -739,7 +739,7 @@ function addSNPTrack(snps, snpMeta){
 		.attr("d", d3.svg.arc()
 			.innerRadius(gwSigRadius-2).outerRadius(gwSigRadius)
 			.startAngle(startAngle).endAngle(endAngle)
-		).style("fill", "white").attr("class", "cookie_protected cookie_hide").attr("transform", trans);
+		).style("fill", "white").attr("transform", trans);
 	}
 }
 
