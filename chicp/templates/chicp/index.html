@@ -96,7 +96,7 @@
 							</div>
 						</div>
 					</div>
-					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
+					<div class="panel panel-default cookie_protected cookie_hide" style="margin-top: 20px;">
 						<div class="panel-heading">Association Studies</div>
 						<div class="panel-body">
 						{% if snpTracks|length > 0 %}
@@ -565,16 +565,7 @@
 
 			
 			function showCookieProtected(){
-				var styleSheetList = document.styleSheets;
-				var styleSheet = styleSheetList[styleSheetList.length-1]
-				if (!styleSheet) return;
-				var theRules = new Array();
-				if (styleSheet.cssRules)
-					theRules = styleSheet.cssRules
-				else if (styleSheet.rules)
-					theRules = styleSheet.rules
-				else return;
-				theRules[0].style.display = '';
+				$( "div.cookie_protected" ).removeClass( "cookie_hide" );
 			}
 			
 			if (getQueryVariable("term") != undefined){ $("#search_term").val(getQueryVariable("term")); }
