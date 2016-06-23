@@ -619,7 +619,7 @@ def _build_snp_query(snp_track, chrom, segmin, segmax):
         query = ElasticQuery.filtered(Query.terms("seqid", [chrom, str("chr"+chrom)]),
                                       Filter(RangeQuery("end", gte=segmin, lte=segmax)),
                                       utils.snpFields)
-        snpQuery = Search(search_query=query, search_from=0, size=2000000, idx=snp_track_idx)
+        snpQuery = Search(search_query=query, search_from=0, size=10000, idx=snp_track_idx)
 
         # snpResult = snpQuery.get_result()
         # snps = snpResult['data']
