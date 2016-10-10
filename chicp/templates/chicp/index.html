@@ -12,7 +12,6 @@
 
 <style>
 <!--
-.cookie_hide { display:none; }
 .examples > a:before {
     font-family: FontAwesome;
     content:"\f147";
@@ -96,7 +95,7 @@
 							</div>
 						</div>
 					</div>
-					<div class="panel panel-default cookie_hide" style="margin-top: 20px;">
+					<div class="panel panel-default" style="margin-top: 20px;">
 						<div class="panel-heading">Association Studies</div>
 						<div class="panel-body">
 						{% if snpTracks|length > 0 %}
@@ -543,39 +542,9 @@
 				declineButton: true,
 				declineText: 'Decline',
 				autoEnable: false,
-				acceptFunction: function(cookieValue){ switch_snp_track($("#gwas")[0]); showCookieProtected(); },
+				acceptFunction: function(cookieValue){ switch_snp_track($("#gwas")[0]); },
 				zindex: 100,
 			});
-
-			if ($.cookie('cb-enabled') == 'enabled' || $.cookie('cb-enabled') == 'accepted'){
-				showCookieProtected();
-			
-				/* optGroup = $("#userData");
-	    		userSettings = $("#userSettings");
-	    		optGroup.empty();
-	    		userSettings.empty();
-	    		for (var i = 0; i < localStorage.length; i++){
-	    			if (localStorage.key(i).match(/ud-/g)){
-	    				//console.log(localStorage.key(i))
-	    				optGroup.append('<option value="'+localStorage.key(i)+'">'+localStorage.getItem(localStorage.key(i))+'</option>');
-	    				userSettings.append('<li class="deleteUD" id="'+localStorage.key(i)+'"><i class="fa fa-trash-o" id="DEL-'+localStorage.key(i)+'"></i>&nbsp;'+localStorage.getItem(localStorage.key(i))+'</li>');
-	    			}
-	    		}*/
-			}	
-
-			
-			function showCookieProtected(){
-				var styleSheetList = document.styleSheets;
-				var styleSheet = styleSheetList[styleSheetList.length-1]
-				if (!styleSheet) return;
-				var theRules = new Array();
-				if (styleSheet.cssRules)
-					theRules = styleSheet.cssRules
-				else if (styleSheet.rules)
-					theRules = styleSheet.rules
-				else return;
-				theRules[0].style.display = '';
-			}
 			
 			if (getQueryVariable("term") != undefined){ $("#search_term").val(getQueryVariable("term")); }
 			else if (localStorage.getItem("searchTerm")) { $("#search_term").val(localStorage.getItem("searchTerm")) }
