@@ -8,3 +8,4 @@ lxml==3.4.2
 tinycss==0.3
 cssselect==0.9.1
 psycopg2==2.6.1
+django-analytical==2.2.2

@@ -1,7 +1,9 @@
 {% load staticfiles %}
+{% load analytical %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+{% analytical_head_top %}
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,9 +31,11 @@
 
 <script type="text/javascript" src="//code.jquery.com/jquery-2.1.4.min.js"></script>
 {% block header_js %}{% endblock %}
+{% analytical_head_bottom %}
 </head>
 
 <body>
+{% analytical_body_top %}
 	<nav class="navbar navbar-inverse navbar-fixed-top">
 		<div class="container-fluid">
 			<div class="navbar-header">
@@ -49,7 +53,7 @@
 					<li><a href="#ContactModal" data-toggle="modal"><i class="fa fa-envelope"></i>&nbsp;Contact Us</a></li>
 					<li id="docs" class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-file"></i>&nbsp;Documentation<b class="caret"></b></a>
 						<ul class="dropdown-menu">
-							<li><a href="/chicp/docs/quickstart/"> QuickStart Guide</a></li>
+							<!-- <li><a href="/chicp/docs/quickstart/"> QuickStart Guide</a></li> -->
 							<li><a href="/chicp/docs/"> Full Documentation</a></li>
 							<li><a href="/chicp/docs/installation/"> Installation</a></li>
 						</ul>
@@ -148,6 +152,6 @@
 			});
 		});
     </script>
-		
+{% analytical_body_bottom %}		
 </body>
 </html>
