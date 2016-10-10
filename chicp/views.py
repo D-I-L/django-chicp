@@ -204,6 +204,7 @@ def chicpeaSearch(request, url):
     searchTerm = queryDict.get("searchTerm").upper()
     searchTerm = searchTerm.replace(",", "")
     searchTerm = searchTerm.replace("..", "-")
+    searchTerm = searchTerm.replace(" ", "") # Chris suggestion to prevent issue with spaces in queries
     snpTrack = queryDict.get("snp_track")
 
     (idx_keys_auth, idx_type_keys_auth) = get_authenticated_idx_and_idx_types(
